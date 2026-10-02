@@ -3,9 +3,10 @@
 // "use client" (line 1) means this page runs in the browser, because it
 // reacts to typing and button clicks. `useState` holds values that change.
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import { extractDealFromChat, type ExtractedDeal } from "@/lib/mock-ai";
+import type { DraftDeal } from "@/lib/ai";
+import { postJson } from "@/lib/client-api";
 import { formatMoney } from "@/lib/format";
 
 // Shared look for every text box on this page.
@@ -13,22 +14,44 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
 
 export default function NewDealPage() {
+  const router = useRouter();
   const [chat, setChat] = useState("");
-  const [draft, setDraft] = useState<ExtractedDeal | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [created, setCreated] = useState(false);
+  const [draft, setDraft] = useState<DraftDeal | null>(null);
+  const [loading, setLoading] = useState(false); // AI is drafting
+  const [saving, setSaving] = useState(false); // deal is being saved
+  const [error, setError] = useState("");
 
+  // Sends the chat to the AI and shows its draft.
   async function handleExtract() {
     setLoading(true);
-    setDraft(await extractDealFromChat(chat));
+    setError("");
+    try {
+      setDraft(await postJson<DraftDeal>("/api/ai/extract-deal", { chat }));
+    } catch (err) {
+      setError((err as Error).message);
+    }
     setLoading(false);
   }
 
+  // Saves the reviewed deal, then opens it.
+  async function handleCreate() {
+    if (!draft) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { id } = await postJson<{ id: string }>("/api/deals", { ...draft, agreement: chat });
+      router.push(`/deals/${id}`);
+    } catch (err) {
+      setError((err as Error).message);
+      setSaving(false);
+    }
+  }
+
   // Updates one field of one milestone when you edit it.
-  function updateMilestone(index: number, field: "title" | "amount", value: string) {
+  function updateMilestone(index: number, field: "title" | "amount" | "dueInDays", value: string) {
     if (!draft) return;
     const milestones = draft.milestones.map((m, i) =>
-      i === index ? { ...m, [field]: field === "amount" ? Number(value) : value } : m,
+      i === index ? { ...m, [field]: field === "title" ? value : Number(value) } : m,
     );
     setDraft({ ...draft, milestones });
   }
@@ -60,12 +83,15 @@ export default function NewDealPage() {
             disabled={loading || chat.trim() === ""}
             className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            {loading ? "AI is reading the chat…" : "Draft deal with AI"}
+            {loading ? "AI is reading the chat…" : draft ? "Draft again" : "Draft deal with AI"}
           </button>
         </section>
 
+        {/* Error message (from the AI or from saving) */}
+        {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
         {/* Step 2: review what the AI drafted */}
-        {draft && !created && (
+        {draft && (
           <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
             <h2 className="font-semibold">Review the deal</h2>
             <p className="text-sm text-slate-500">Check everything — you can edit any field.</p>
@@ -93,20 +119,33 @@ export default function NewDealPage() {
             </div>
 
             <h3 className="mt-5 text-sm font-medium">Milestones</h3>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="mt-1 grid grid-cols-[1fr_7rem_6rem] gap-2 text-xs text-slate-500">
+              <span>What&apos;s delivered</span>
+              <span>Amount ($)</span>
+              <span>Due in (days)</span>
+            </div>
+            <div className="mt-1 flex flex-col gap-2">
               {draft.milestones.map((m, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="grid grid-cols-[1fr_7rem_6rem] gap-2">
                   <input
                     className={inputClass}
                     value={m.title}
                     onChange={(e) => updateMilestone(i, "title", e.target.value)}
                   />
                   <input
-                    className={`${inputClass} w-32`}
+                    className={inputClass}
                     type="number"
                     min={1}
                     value={m.amount}
                     onChange={(e) => updateMilestone(i, "amount", e.target.value)}
+                  />
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    max={29}
+                    value={m.dueInDays}
+                    onChange={(e) => updateMilestone(i, "dueInDays", e.target.value)}
                   />
                 </div>
               ))}
@@ -117,29 +156,12 @@ export default function NewDealPage() {
                 Total: <span className="font-semibold">{formatMoney(total)}</span>
               </p>
               <button
-                onClick={() => setCreated(true)}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                onClick={handleCreate}
+                disabled={saving}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
               >
-                Create deal & payment link
+                {saving ? "Saving…" : "Create deal & payment link"}
               </button>
-            </div>
-          </section>
-        )}
-
-        {/* Step 3: done */}
-        {created && (
-          <section className="mt-6 rounded-xl border border-brand-100 bg-brand-50 p-5">
-            <h2 className="font-semibold text-brand-900">Deal created (demo)</h2>
-            <p className="mt-1 text-sm text-brand-900">
-              Once PayPal is connected, this will save the deal and give you a payment link to send your client.
-            </p>
-            <div className="mt-3 flex gap-3 text-sm font-medium">
-              <Link href="/pay/d-1003" className="text-brand-700 underline">
-                See what your client sees
-              </Link>
-              <Link href="/dashboard" className="text-brand-700 underline">
-                Back to dashboard
-              </Link>
             </div>
           </section>
         )}

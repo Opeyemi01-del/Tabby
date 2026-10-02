@@ -28,6 +28,10 @@ export type Milestone = {
   status: Status;
   deliveryNote?: string; // what the freelancer submitted
   aiCheck?: AiCheck;
+  // PayPal references, filled in as the payment moves along:
+  paypalOrderId?: string; // created when the client starts paying
+  authorizationId?: string; // the "hold" on the client's money
+  captureId?: string; // the actual payment to the freelancer
 };
 
 // One item in the evidence pack the AI builds for a dispute.

@@ -2,27 +2,38 @@
 // One milestone on the deal page, with the right action for its status:
 //   awaiting_payment -> link to the client's payment page
 //   funds_held       -> form to submit work for the AI check
-//   work_submitted   -> AI result + "Release funds" button
+//   work_submitted   -> AI result + "Release funds" button (PayPal capture)
 //   released / disputed -> just shows the outcome
+// After an action, router.refresh() reloads the deal from the database.
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StatusBadge from "./StatusBadge";
-import { checkDelivery } from "@/lib/mock-ai";
+import { postJson } from "@/lib/client-api";
 import { formatDate, formatMoney } from "@/lib/format";
-import type { AiCheck, Milestone } from "@/lib/types";
+import type { Milestone } from "@/lib/types";
 
 export default function MilestoneCard({ dealId, milestone }: { dealId: string; milestone: Milestone }) {
-  const [status, setStatus] = useState(milestone.status);
-  const [aiCheck, setAiCheck] = useState<AiCheck | undefined>(milestone.aiCheck);
+  const router = useRouter();
   const [note, setNote] = useState("");
-  const [checking, setChecking] = useState(false);
+  const [busy, setBusy] = useState<"" | "checking" | "releasing">("");
+  const [error, setError] = useState("");
 
-  async function handleSubmitWork() {
-    setChecking(true);
-    const result = await checkDelivery(note);
-    setAiCheck(result);
-    setChecking(false);
-    if (result.verdict === "pass") setStatus("work_submitted");
+  const { status, aiCheck } = milestone;
+  const apiBase = `/api/deals/${dealId}/milestones/${milestone.id}`;
+
+  // Runs an action, shows any error, then reloads the page data.
+  async function run(kind: "checking" | "releasing", url: string, body?: unknown) {
+    setBusy(kind);
+    setError("");
+    try {
+      await postJson(url, body);
+      setNote("");
+      router.refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setBusy("");
   }
 
   return (
@@ -58,11 +69,11 @@ export default function MilestoneCard({ dealId, milestone }: { dealId: string; m
             className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
           />
           <button
-            onClick={handleSubmitWork}
-            disabled={checking || note.trim() === ""}
+            onClick={() => run("checking", `${apiBase}/submit`, { deliveryNote: note })}
+            disabled={busy !== "" || note.trim() === ""}
             className="mt-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            {checking ? "AI is checking the work…" : "Submit work for AI check"}
+            {busy === "checking" ? "AI is checking the work…" : "Submit work for AI check"}
           </button>
         </div>
       )}
@@ -81,10 +92,11 @@ export default function MilestoneCard({ dealId, milestone }: { dealId: string; m
 
       {status === "work_submitted" && (
         <button
-          onClick={() => setStatus("released")}
-          className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          onClick={() => run("releasing", `${apiBase}/release`)}
+          disabled={busy !== ""}
+          className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          Release funds (demo)
+          {busy === "releasing" ? "Releasing via PayPal…" : "Release funds"}
         </button>
       )}
 
@@ -98,6 +110,8 @@ export default function MilestoneCard({ dealId, milestone }: { dealId: string; m
           </Link>
         </p>
       )}
+
+      {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     </div>
   );
 }

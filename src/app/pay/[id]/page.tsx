@@ -1,15 +1,18 @@
 // CLIENT PAYMENT PAGE ("/pay/d-1003") — the link the freelancer sends.
 // This page is for the CLIENT, so it has no freelancer menu.
-// In step 2 the placeholder button becomes the real PayPal checkout.
 import { notFound } from "next/navigation";
 import { getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
+import PayPalButton from "@/components/PayPalButton";
 
 export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
   const { id } = await params;
   const deal = getDeal(id);
   if (!deal) notFound();
+
+  // Public PayPal Client ID (from .env.local) for the checkout button.
+  const paypalClientId = process.env.PAYPAL_CLIENT_ID;
 
   // The client pays the first milestone that hasn't been paid yet.
   const dueNow = deal.milestones.find((m) => m.status === "awaiting_payment");
@@ -45,13 +48,13 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
               <span className="text-2xl font-semibold tabular-nums">{formatMoney(dueNow.amount)}</span>
             </div>
 
-            {/* Placeholder: replaced by the real PayPal button in step 2 */}
-            <button
-              disabled
-              className="mt-5 w-full rounded-full bg-amber-400 py-3 font-semibold text-slate-900 opacity-80"
-            >
-              Pay with PayPal (coming in step 2)
-            </button>
+            {paypalClientId ? (
+              <PayPalButton dealId={deal.id} clientId={paypalClientId} />
+            ) : (
+              <p className="mt-5 rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-800">
+                PayPal isn&apos;t connected yet. Add PAYPAL_CLIENT_ID to .env.local to enable payments.
+              </p>
+            )}
           </>
         ) : (
           <p className="mt-4 border-t border-slate-200 pt-4 text-center text-slate-600">Nothing to pay right now.</p>

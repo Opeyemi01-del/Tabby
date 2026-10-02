@@ -6,6 +6,9 @@ import DealCard from "@/components/DealCard";
 import { getAllDeals, totalsByStatus } from "@/lib/deals";
 import { formatMoney } from "@/lib/format";
 
+// Always read fresh data from the database (never a cached copy).
+export const dynamic = "force-dynamic";
+
 export default function DashboardPage() {
   const deals = getAllDeals();
   const totals = totalsByStatus(deals);

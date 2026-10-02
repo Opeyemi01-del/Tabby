@@ -2,8 +2,12 @@
 // PayPal dispute, with the evidence pack the AI put together.
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import DisputeActions from "@/components/DisputeActions";
 import { getAllDeals } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
+
+// Always read fresh data from the database (never a cached copy).
+export const dynamic = "force-dynamic";
 
 export default function DisputesPage() {
   const disputedDeals = getAllDeals().filter((deal) => deal.dispute);
@@ -51,6 +55,11 @@ export default function DisputesPage() {
 
               {/* The AI-built evidence pack */}
               <h2 className="mt-5 text-sm font-semibold">AI evidence pack</h2>
+              {dispute.evidence.length === 0 && (
+                <p className="mt-2 text-sm text-slate-500">
+                  Not built yet. The AI will gather facts from the agreement and your delivery.
+                </p>
+              )}
               <ol className="mt-2 flex flex-col gap-2">
                 {dispute.evidence.map((item, i) => (
                   <li key={item.title} className="rounded-lg bg-slate-50 p-3 text-sm">
@@ -62,12 +71,7 @@ export default function DisputesPage() {
                 ))}
               </ol>
 
-              <button
-                disabled
-                className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white opacity-60"
-              >
-                Submit evidence to PayPal (coming in step 2)
-              </button>
+              <DisputeActions dealId={deal.id} dispute={dispute} />
             </section>
           );
         })}

@@ -1,15 +1,14 @@
 // Helpers for reading deals. Pages call these instead of touching the
-// sample data directly, so in step 2 we only swap the inside of these
-// functions for database/PayPal calls — the pages stay the same.
-import { sampleDeals } from "./sample-data";
+// database directly. Server-only (the database lives on the server).
+import { findDeal, listDeals } from "./db";
 import type { Deal, Status } from "./types";
 
 export function getAllDeals(): Deal[] {
-  return sampleDeals;
+  return listDeals();
 }
 
 export function getDeal(id: string): Deal | undefined {
-  return sampleDeals.find((deal) => deal.id === id);
+  return findDeal(id);
 }
 
 export function dealTotal(deal: Deal): number {
