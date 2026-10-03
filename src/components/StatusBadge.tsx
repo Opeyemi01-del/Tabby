@@ -5,7 +5,7 @@ import type { Status } from "@/lib/types";
 const styles: Record<Status, { label: string; className: string }> = {
   awaiting_payment: { label: "Awaiting payment", className: "bg-amber-50 text-amber-700 ring-amber-200" },
   funds_held: { label: "Funds held", className: "bg-sky-50 text-sky-700 ring-sky-200" },
-  work_submitted: { label: "Work submitted", className: "bg-violet-50 text-violet-700 ring-violet-200" },
+  work_submitted: { label: "Awaiting approval", className: "bg-violet-50 text-violet-700 ring-violet-200" },
   released: { label: "Paid", className: "bg-brand-50 text-brand-700 ring-brand-100" },
   disputed: { label: "Disputed", className: "bg-red-50 text-red-700 ring-red-200" },
 };

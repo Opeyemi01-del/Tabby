@@ -7,6 +7,7 @@ import StatusBadge from "@/components/StatusBadge";
 import MilestoneCard from "@/components/MilestoneCard";
 import { dealStatus, dealTotal, getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
+import { autoReleaseBlocker } from "@/lib/release";
 
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   const { id } = await params;
@@ -38,7 +39,10 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
         {/* Payment link to send to the client */}
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
           <p className="font-medium">Client payment link</p>
-          <p className="mt-1 text-slate-600">Send this to {deal.clientName}. Their payment is held by PayPal until you deliver.</p>
+          <p className="mt-1 text-slate-600">
+            Send this to {deal.clientName}. Their payment is held by PayPal, and they approve the release once
+            they&apos;ve reviewed your work.
+          </p>
           <Link href={`/pay/${deal.id}`} className="mt-2 inline-block font-mono text-brand-700 underline">
             /pay/{deal.id}
           </Link>
@@ -48,7 +52,13 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
         <h2 className="mb-3 mt-8 text-lg font-semibold">Milestones</h2>
         <div className="flex flex-col gap-3">
           {deal.milestones.map((m) => (
-            <MilestoneCard key={m.id} dealId={deal.id} milestone={m} />
+            <MilestoneCard
+              key={m.id}
+              dealId={deal.id}
+              clientName={deal.clientName}
+              milestone={m}
+              releaseReady={autoReleaseBlocker(m) === null}
+            />
           ))}
         </div>
 

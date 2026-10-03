@@ -5,6 +5,8 @@ import { getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import PayPalButton from "@/components/PayPalButton";
+import Link from "next/link";
+import { getClientKey, isValidClientKey } from "@/lib/client-key";
 
 export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
   const { id } = await params;
@@ -16,6 +18,10 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
 
   // The client pays the first milestone that hasn't been paid yet.
   const dueNow = deal.milestones.find((m) => m.status === "awaiting_payment");
+
+  // Is this the browser that paid? Then offer the review page.
+  const isPayer = isValidClientKey(deal, await getClientKey(deal.id));
+  const workToReview = deal.milestones.some((m) => m.status === "work_submitted");
 
   return (
     <main className="mx-auto w-full max-w-lg px-4 py-12">
@@ -61,12 +67,22 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
         )}
       </div>
 
+      {/* Shortcut to the review page, only for the browser that paid */}
+      {isPayer && (
+        <Link
+          href={`/review/${deal.id}`}
+          className="mt-4 block rounded-xl border border-brand-500 bg-white p-4 text-center font-medium text-brand-700 hover:bg-brand-50"
+        >
+          {workToReview ? "Work delivered — review it now →" : "Go to your review page →"}
+        </Link>
+      )}
+
       {/* Reassurance for the client */}
       <div className="mt-4 rounded-xl bg-brand-50 p-4 text-sm text-brand-900">
         <p className="font-semibold">Your money is protected</p>
         <p className="mt-1">
-          PayPal holds your payment. It&apos;s only released to the freelancer once the work is delivered and checked
-          against what you agreed.
+          PayPal holds your payment. When the work is delivered, AI checks the actual files against what you agreed,
+          and the money is only released when you approve it.
         </p>
       </div>
     </main>

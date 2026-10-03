@@ -61,9 +61,9 @@ export const sampleDeals: Deal[] = [
         deliveryNote:
           "Live at brightpath-launch.example.com. Mobile layout tested; contact form sends to hello@brightpath.example.com.",
         aiCheck: {
-          verdict: "pass",
+          verdict: "claimed_only",
           summary:
-            "Delivery matches the agreement: one-page site is live, mobile friendly, and includes the contact form.",
+            "The note says the site is live with a mobile layout and contact form, but no files or reachable links were provided to confirm it.",
         },
       },
     ],
@@ -108,7 +108,7 @@ export const sampleDeals: Deal[] = [
         status: "disputed",
         deliveryNote: "Delivered 8 wireframes as a Figma link on Sept 14.",
         aiCheck: {
-          verdict: "pass",
+          verdict: "verified",
           summary: "8 wireframes delivered on Sept 14, one day before the agreed date.",
         },
       },

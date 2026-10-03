@@ -4,7 +4,7 @@
 // Where a milestone (or a whole deal) is in its life:
 //   awaiting_payment -> client hasn't paid yet
 //   funds_held       -> client paid; PayPal is holding the money
-//   work_submitted   -> freelancer delivered; AI has checked it
+//   work_submitted   -> freelancer delivered; waiting for the CLIENT to approve
 //   released         -> money sent to the freelancer
 //   disputed         -> client opened a PayPal dispute
 export type Status =
@@ -14,10 +14,35 @@ export type Status =
   | "released"
   | "disputed";
 
-// The AI's verdict after comparing delivered work with the agreement.
+// The AI's verdict after comparing delivered work with the agreement:
+//   verified     -> AI opened the actual files/links and they match
+//   claimed_only -> nothing it could inspect; it's only the freelancer's word
+//   concerns     -> what it inspected is missing something or doesn't match
+export type Verdict = "verified" | "claimed_only" | "concerns";
+
+// One line of the AI's checklist, e.g. "SVG files" -> met: "yes".
+export type CheckItem = {
+  requirement: string;
+  met: "yes" | "no" | "unclear";
+  note: string;
+};
+
 export type AiCheck = {
-  verdict: "pass" | "concerns";
+  verdict: Verdict;
   summary: string;
+  checklist?: CheckItem[];
+};
+
+// Something the freelancer handed in: an uploaded file or a link.
+export type Deliverable = {
+  id: string; // random, also used in the download URL
+  kind: "file" | "link";
+  name: string; // file name, or the link itself
+  mimeType?: string;
+  size?: number; // bytes
+  sha256?: string; // fingerprint: proves the file wasn't changed later
+  aiReadable: boolean; // could the AI actually open it?
+  aiNote?: string; // why not, if it couldn't
 };
 
 export type Milestone = {
@@ -27,7 +52,13 @@ export type Milestone = {
   dueDate: string; // ISO date, e.g. "2026-10-20"
   status: Status;
   deliveryNote?: string; // what the freelancer submitted
+  deliverables?: Deliverable[];
+  submittedAt?: string; // ISO date-time of the latest submission
   aiCheck?: AiCheck;
+  // Client review (layer 1): only the person who paid can approve.
+  reviewDeadline?: string; // after this, a "verified" delivery can be released
+  clientFeedback?: string; // set when the client asks for changes
+  releasedBy?: "client" | "auto"; // who triggered the payout
   // PayPal references, filled in as the payment moves along:
   paypalOrderId?: string; // created when the client starts paying
   authorizationId?: string; // the "hold" on the client's money
@@ -58,5 +89,8 @@ export type Deal = {
   createdAt: string;
   agreement: string; // the client chat the deal was created from
   milestones: Milestone[];
+  // Fingerprint (SHA-256) of the secret review key given to whoever paid.
+  // The key itself is never stored, so even the database can't leak it.
+  clientKeyHash?: string;
   dispute?: Dispute;
 };
