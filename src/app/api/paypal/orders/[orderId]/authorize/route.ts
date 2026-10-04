@@ -6,6 +6,7 @@
 import { handleError, jsonError } from "@/lib/api";
 import { newClientKey, setClientKeyCookie } from "@/lib/client-key";
 import { findByPaypalOrder, saveDeal } from "@/lib/db";
+import { addEvent } from "@/lib/events";
 import { authorizeOrder } from "@/lib/paypal";
 
 export async function POST(_req: Request, ctx: RouteContext<"/api/paypal/orders/[orderId]/authorize">) {
@@ -22,6 +23,12 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/paypal/orders/
 
     milestone.authorizationId = authorizationId;
     milestone.status = "funds_held";
+    addEvent(deal, {
+      type: "payment_held",
+      milestoneId: milestone.id,
+      summary: `Client paid $${milestone.amount.toFixed(2)} for "${milestone.title}" — held by PayPal`,
+      proof: [`PayPal authorization ${authorizationId}`],
+    });
 
     // Only the FIRST payer gets a key. Paying a later milestone doesn't
     // hand out a new one, so nobody can "buy" approval rights.

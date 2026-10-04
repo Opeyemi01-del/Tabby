@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import MilestoneCard from "@/components/MilestoneCard";
+import Timeline from "@/components/Timeline";
 import { dealStatus, dealTotal, getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 import { autoReleaseBlocker } from "@/lib/release";
@@ -60,6 +61,15 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               releaseReady={autoReleaseBlocker(m) === null}
             />
           ))}
+        </div>
+
+        {/* Dispute Shield: the deal's tamper-evident history */}
+        <h2 className="mb-1 mt-8 text-lg font-semibold">Dispute Shield</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Every step is recorded with proof and chained by fingerprints, so the history can&apos;t be quietly changed.
+        </p>
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <Timeline deal={deal} />
         </div>
 
         {/* The agreement the AI checks work against */}

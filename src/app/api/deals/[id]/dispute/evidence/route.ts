@@ -4,6 +4,7 @@
 import { buildEvidence } from "@/lib/ai";
 import { handleError, jsonError } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
+import { addEvent } from "@/lib/events";
 import { provideDisputeEvidence } from "@/lib/paypal";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/dispute/evidence">) {
@@ -29,6 +30,12 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/disp
       const notes = dispute.evidence.map((e, i) => `${i + 1}. ${e.title}: ${e.detail}`).join("\n");
       await provideDisputeEvidence(dispute.id, notes);
       dispute.status = "evidence_submitted";
+      addEvent(deal, {
+        type: "evidence_submitted",
+        milestoneId: milestone.id,
+        summary: `Evidence pack (${dispute.evidence.length} items) sent to PayPal`,
+        proof: [`PayPal dispute ${dispute.id}`],
+      });
       saveDeal(deal);
     }
 

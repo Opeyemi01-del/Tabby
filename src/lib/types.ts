@@ -80,6 +80,29 @@ export type Dispute = {
   evidence: EvidenceItem[];
 };
 
+// DISPUTE SHIELD — one step in a deal's history (the timeline).
+// Each event stores the fingerprint of the event before it, forming a
+// chain: changing or deleting any past event breaks every link after it.
+export type EventType =
+  | "deal_created"
+  | "payment_held"
+  | "work_submitted"
+  | "ai_checked"
+  | "changes_requested"
+  | "released"
+  | "dispute_opened"
+  | "evidence_submitted";
+
+export type DealEvent = {
+  type: EventType;
+  at: string; // ISO date-time
+  milestoneId?: string;
+  summary: string; // human-readable, e.g. "Client paid $150 — held by PayPal"
+  proof?: string[]; // e.g. PayPal IDs, file fingerprints
+  prevHash: string; // fingerprint of the previous event ("" for the first)
+  hash: string; // fingerprint of this event (including prevHash)
+};
+
 export type Deal = {
   id: string;
   title: string;
@@ -92,5 +115,9 @@ export type Deal = {
   // Fingerprint (SHA-256) of the secret review key given to whoever paid.
   // The key itself is never stored, so even the database can't leak it.
   clientKeyHash?: string;
+  // Original chat screenshots (private: used only as dispute evidence).
+  agreementFiles?: Deliverable[];
+  // Dispute Shield history, oldest first.
+  events?: DealEvent[];
   dispute?: Dispute;
 };

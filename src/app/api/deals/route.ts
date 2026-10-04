@@ -1,11 +1,34 @@
 // POST /api/deals   { title, clientName, clientEmail, agreement, milestones }
 // Saves a new deal (after the freelancer reviewed the AI draft).
+// Screenshot deals send a form instead: field "deal" (that JSON) plus the
+// original "screenshots", which are kept privately as dispute evidence.
 import { isoDateInDays, jsonError, readJson } from "@/lib/api";
 import { newDealId, saveDeal } from "@/lib/db";
-import type { Deal } from "@/lib/types";
+import { saveUploadedFile } from "@/lib/deliverables";
+import { addEvent, sha256Text, short } from "@/lib/events";
+import type { Deal, Deliverable } from "@/lib/types";
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function POST(req: Request) {
-  const body = await readJson(req);
+  let body: Record<string, unknown>;
+  let screenshots: File[] = [];
+
+  if (req.headers.get("content-type")?.includes("multipart/form-data")) {
+    try {
+      const form = await req.formData();
+      body = JSON.parse(String(form.get("deal") ?? "{}"));
+      screenshots = form.getAll("screenshots").filter((f): f is File => f instanceof File && f.size > 0);
+    } catch {
+      return jsonError("Couldn't read the deal — please try again");
+    }
+    if (screenshots.length > 3) return jsonError("Upload at most 3 screenshots");
+    if (screenshots.some((f) => !IMAGE_TYPES.includes(f.type) || f.size > 5 * 1024 * 1024)) {
+      return jsonError("Screenshots must be PNG, JPG or WebP images under 5 MB");
+    }
+  } else {
+    body = await readJson(req);
+  }
   const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
   const title = text(body.title);
@@ -50,6 +73,23 @@ export async function POST(req: Request) {
     agreement,
     milestones,
   };
+
+  // Keep the original screenshots (fingerprinted) as private evidence.
+  const agreementFiles: Deliverable[] = [];
+  for (const file of screenshots) agreementFiles.push((await saveUploadedFile(file)).deliverable);
+  if (agreementFiles.length) deal.agreementFiles = agreementFiles;
+
+  // Dispute Shield: the first link in the chain.
+  addEvent(deal, {
+    type: "deal_created",
+    summary: agreementFiles.length
+      ? `Agreement recorded from ${agreementFiles.length} chat screenshot${agreementFiles.length > 1 ? "s" : ""}`
+      : "Agreement recorded from the client chat",
+    proof: [
+      `Agreement fingerprint ${short(sha256Text(agreement))}`,
+      ...agreementFiles.map((f) => `Screenshot ${f.name} · ${short(f.sha256 ?? "")}`),
+    ],
+  });
   saveDeal(deal);
   return Response.json({ id: deal.id }, { status: 201 });
 }

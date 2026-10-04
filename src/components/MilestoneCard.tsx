@@ -202,11 +202,22 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
       )}
 
       {status === "released" && (
-        <p className="mt-3 text-sm text-brand-700">
-          Paid to you ✓
-          {milestone.releasedBy === "client" && " — approved by the client"}
-          {milestone.releasedBy === "auto" && " — released after the review period"}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <p className="text-brand-700">
+            Paid to you ✓
+            {milestone.releasedBy === "client" && " — approved by the client"}
+            {milestone.releasedBy === "auto" && " — released after the review period"}
+          </p>
+          {milestone.releasedBy && (
+            <Link
+              href={`/certificate/${dealId}/${milestone.id}`}
+              target="_blank"
+              className="rounded-lg border border-brand-500 px-3 py-1.5 font-medium text-brand-700 hover:bg-brand-50"
+            >
+              🛡 View certificate
+            </Link>
+          )}
+        </div>
       )}
 
       {status === "disputed" && (

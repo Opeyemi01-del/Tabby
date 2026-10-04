@@ -4,6 +4,7 @@
 import { jsonError, readJson } from "@/lib/api";
 import { getClientKey, isValidClientKey, setClientKeyCookie } from "@/lib/client-key";
 import { findDeal, saveDeal } from "@/lib/db";
+import { addEvent } from "@/lib/events";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/milestones/[milestoneId]/request-changes">) {
   const { id, milestoneId } = await ctx.params;
@@ -23,6 +24,11 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   milestone.status = "funds_held";
   milestone.clientFeedback = feedback;
   milestone.reviewDeadline = undefined;
+  addEvent(deal, {
+    type: "changes_requested",
+    milestoneId: milestone.id,
+    summary: `Client asked for changes on "${milestone.title}" — money stays held`,
+  });
   saveDeal(deal);
   await setClientKeyCookie(deal.id, key!);
   return Response.json({ status: milestone.status });

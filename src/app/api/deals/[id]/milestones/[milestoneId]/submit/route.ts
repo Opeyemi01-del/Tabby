@@ -8,7 +8,10 @@ import { checkDelivery } from "@/lib/ai";
 import { handleError, jsonError } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
 import { checkLink, LIMITS, saveUploadedFile, type Evidence } from "@/lib/deliverables";
+import { addEvent, short } from "@/lib/events";
 import { reviewDeadlineFromNow } from "@/lib/release";
+
+const VERDICT_LABELS = { verified: "verified from the files", claimed_only: "claimed only", concerns: "concerns" };
 import type { Deliverable } from "@/lib/types";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/milestones/[milestoneId]/submit">) {
@@ -54,6 +57,22 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
     milestone.deliverables = deliverables;
     milestone.submittedAt = new Date().toISOString();
     milestone.aiCheck = aiCheck;
+
+    // Dispute Shield: what was delivered (with fingerprints) and the AI's verdict.
+    addEvent(deal, {
+      type: "work_submitted",
+      milestoneId: milestone.id,
+      summary: `Work delivered for "${milestone.title}": ${deliverables.length} item${deliverables.length > 1 ? "s" : ""}`,
+      proof: deliverables.map((d) => `${d.kind === "file" ? "File" : "Link"} ${d.name}${d.sha256 ? ` · ${short(d.sha256)}` : ""}`),
+    });
+    const met = aiCheck.checklist?.filter((c) => c.met === "yes").length ?? 0;
+    const total = aiCheck.checklist?.length ?? 0;
+    addEvent(deal, {
+      type: "ai_checked",
+      milestoneId: milestone.id,
+      summary: `AI check: ${VERDICT_LABELS[aiCheck.verdict]}${total ? ` (${met} of ${total} requirements met)` : ""}`,
+    });
+
     if (aiCheck.verdict !== "concerns") {
       milestone.status = "work_submitted";
       milestone.reviewDeadline = reviewDeadlineFromNow();

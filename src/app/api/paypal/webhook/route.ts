@@ -3,6 +3,7 @@
 // Every event is verified with PayPal first so nobody can fake one.
 import { handleError, jsonError } from "@/lib/api";
 import { findByPaypalPayment, saveDeal } from "@/lib/db";
+import { addEvent } from "@/lib/events";
 import { verifyWebhook } from "@/lib/paypal";
 
 type WebhookEvent = {
@@ -43,6 +44,12 @@ export async function POST(req: Request) {
           status: "open",
           evidence: [], // the AI builds this when the freelancer opens the dispute
         };
+        addEvent(found.deal, {
+          type: "dispute_opened",
+          milestoneId: found.milestone.id,
+          summary: `Client opened a PayPal dispute: ${found.deal.dispute.reason}`,
+          proof: [`PayPal dispute ${r.dispute_id}`],
+        });
         saveDeal(found.deal);
       }
       break;

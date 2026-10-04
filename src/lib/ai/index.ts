@@ -192,7 +192,10 @@ export async function buildEvidence(deal: Deal, milestone: Milestone, disputeRea
       ((milestone.deliverables ?? []).map((d) => `- ${d.kind} ${d.name}${d.sha256 ? ` (SHA-256 ${d.sha256})` : ""}`).join("\n") ||
         "- none recorded") +
       `\n\nAI delivery check at the time: ${milestone.aiCheck ? `${milestone.aiCheck.verdict} — ${milestone.aiCheck.summary}` : "none"}` +
-      `\nClient approved release: ${milestone.releasedBy === "client" ? "yes" : "no"}`,
+      `\nClient approved release: ${milestone.releasedBy === "client" ? "yes" : "no"}` +
+      `\n\nTamper-evident timeline of the deal (each step chained by SHA-256):\n` +
+      ((deal.events ?? []).map((e) => `- ${e.at}: ${e.summary}${e.proof?.length ? ` [${e.proof.join("; ")}]` : ""}`).join("\n") ||
+        "- no timeline recorded"),
     schema: {
       type: "OBJECT",
       properties: {

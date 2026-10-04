@@ -85,7 +85,16 @@ export default function NewDealPage() {
     setError("");
     try {
       const agreement = mode === "text" ? chat : (draft.transcript ?? "");
-      const { id } = await postJson<{ id: string }>("/api/deals", { ...draft, agreement });
+      let id: string;
+      if (mode === "text") {
+        ({ id } = await postJson<{ id: string }>("/api/deals", { ...draft, agreement }));
+      } else {
+        // Also send the original screenshots: kept privately as dispute evidence.
+        const form = new FormData();
+        form.append("deal", JSON.stringify({ ...draft, agreement }));
+        shots.forEach((s) => form.append("screenshots", s.file));
+        ({ id } = await postForm<{ id: string }>("/api/deals", form));
+      }
       router.push(`/deals/${id}`);
     } catch (err) {
       setError((err as Error).message);

@@ -6,6 +6,7 @@
 // Server-only.
 import { captureAuthorization } from "./paypal";
 import { saveDeal } from "./db";
+import { addEvent } from "./events";
 import type { Deal, Milestone } from "./types";
 
 // How long the client has to review. Set REVIEW_PERIOD_HOURS in .env.local
@@ -38,6 +39,15 @@ export async function releaseMilestone(deal: Deal, m: Milestone, by: "client" | 
   const { captureId, status } = await captureAuthorization(m.authorizationId);
   m.captureId = captureId;
   m.releasedBy = by;
+  addEvent(deal, {
+    type: "released",
+    milestoneId: m.id,
+    summary:
+      by === "client"
+        ? `Client approved — $${m.amount.toFixed(2)} released to the freelancer`
+        : `Review period ended with no response — $${m.amount.toFixed(2)} released (AI-verified delivery)`,
+    proof: [`PayPal capture ${captureId} (${status})`],
+  });
   // PENDING can happen in sandbox (e.g. review); the webhook finishes it.
   if (status === "COMPLETED") m.status = "released";
   saveDeal(deal);
