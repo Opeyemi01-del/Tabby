@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import StatusBadge from "./StatusBadge";
 import AiCheckBox from "./AiCheckBox";
 import DeliverableList from "./DeliverableList";
+import CancelButton from "./CancelButton";
 import { postForm, postJson } from "@/lib/client-api";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import type { Milestone } from "@/lib/types";
@@ -104,8 +105,17 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
           {/* Feedback from the client, or the AI's concerns about the last attempt */}
           {milestone.clientFeedback && (
             <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-              <span className="font-semibold">{clientName} asked for changes:</span>
+              <span className="font-semibold">{clientName} asked for fixes:</span>
               <p className="mt-1 whitespace-pre-wrap">{milestone.clientFeedback}</p>
+              {milestone.fixDeadline && (
+                <p className="mt-2 text-xs">
+                  Send the fix by{" "}
+                  <span suppressHydrationWarning className="font-medium">
+                    {formatDateTime(milestone.fixDeadline)}
+                  </span>
+                  . After that, {clientName} can cancel and get their money back.
+                </p>
+              )}
             </div>
           )}
           {aiCheck && (
@@ -218,6 +228,18 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
             </Link>
           )}
         </div>
+      )}
+
+      {/* The freelancer can always back out before payout */}
+      {(status === "funds_held" || status === "work_submitted") && (
+        <CancelButton dealId={dealId} milestoneId={milestone.id} amount={milestone.amount} who="freelancer" />
+      )}
+
+      {status === "refunded" && (
+        <p className="mt-3 text-sm text-slate-600">
+          Cancelled {milestone.refundedBy === "freelancer" ? "by you" : `by ${clientName} after a missed deadline`} — the
+          client&apos;s money was released back to them.
+        </p>
       )}
 
       {status === "disputed" && (

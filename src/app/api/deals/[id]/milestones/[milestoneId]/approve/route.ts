@@ -5,7 +5,7 @@
 import { handleError, jsonError, readJson } from "@/lib/api";
 import { getClientKey, isValidClientKey, setClientKeyCookie } from "@/lib/client-key";
 import { findDeal } from "@/lib/db";
-import { releaseMilestone } from "@/lib/release";
+import { clientCanReview, releaseMilestone } from "@/lib/release";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/milestones/[milestoneId]/approve">) {
   const { id, milestoneId } = await ctx.params;
@@ -16,7 +16,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   const body = await readJson(req);
   const key = await getClientKey(deal.id, typeof body.key === "string" ? body.key : null);
   if (!isValidClientKey(deal, key)) return jsonError("Only the client who paid can approve this work", 403);
-  if (milestone.status !== "work_submitted") return jsonError("There's no delivered work waiting for approval", 409);
+  // Delivered work, or work the AI flagged — the client has the final say.
+  if (!clientCanReview(milestone)) return jsonError("There's no delivered work waiting for approval", 409);
 
   try {
     await setClientKeyCookie(deal.id, key!); // remember them on this device

@@ -16,11 +16,13 @@ export function dealTotal(deal: Deal): number {
 }
 
 // A deal's overall status comes from its milestones:
-// any dispute wins, then the first milestone that isn't paid yet.
+// any dispute wins, then the first milestone that isn't finished yet
+// (paid or refunded). If all are finished: "released" if anything was paid.
 export function dealStatus(deal: Deal): Status {
   if (deal.milestones.some((m) => m.status === "disputed")) return "disputed";
-  const current = deal.milestones.find((m) => m.status !== "released");
-  return current ? current.status : "released";
+  const current = deal.milestones.find((m) => m.status !== "released" && m.status !== "refunded");
+  if (current) return current.status;
+  return deal.milestones.some((m) => m.status === "released") ? "released" : "refunded";
 }
 
 // Adds up money across all deals, grouped by milestone status
@@ -31,6 +33,7 @@ export function totalsByStatus(deals: Deal[]): Record<Status, number> {
     funds_held: 0,
     work_submitted: 0,
     released: 0,
+    refunded: 0,
     disputed: 0,
   };
   for (const deal of deals) {

@@ -6,12 +6,14 @@
 //   funds_held       -> client paid; PayPal is holding the money
 //   work_submitted   -> freelancer delivered; waiting for the CLIENT to approve
 //   released         -> money sent to the freelancer
+//   refunded         -> cancelled: PayPal's hold was released back to the client
 //   disputed         -> client opened a PayPal dispute
 export type Status =
   | "awaiting_payment"
   | "funds_held"
   | "work_submitted"
   | "released"
+  | "refunded"
   | "disputed";
 
 // The AI's verdict after comparing delivered work with the agreement:
@@ -58,7 +60,9 @@ export type Milestone = {
   // Client review (layer 1): only the person who paid can approve.
   reviewDeadline?: string; // after this, a "verified" delivery can be released
   clientFeedback?: string; // set when the client asks for changes
+  fixDeadline?: string; // after this, the client may cancel if no fix arrived
   releasedBy?: "client" | "auto"; // who triggered the payout
+  refundedBy?: "client" | "freelancer"; // who cancelled the hold
   // PayPal references, filled in as the payment moves along:
   paypalOrderId?: string; // created when the client starts paying
   authorizationId?: string; // the "hold" on the client's money
@@ -90,6 +94,7 @@ export type EventType =
   | "ai_checked"
   | "changes_requested"
   | "released"
+  | "refunded"
   | "dispute_opened"
   | "evidence_submitted";
 

@@ -68,7 +68,8 @@ export async function POST(req: Request) {
     // A hold was cancelled or expired: the client needs to pay again.
     case "PAYMENT.AUTHORIZATION.VOIDED": {
       const found = r.id ? findByPaypalPayment(r.id) : undefined;
-      if (found && found.milestone.status !== "released") {
+      // Skip holds we cancelled ourselves (already "refunded").
+      if (found && found.milestone.status !== "released" && found.milestone.status !== "refunded") {
         found.milestone.status = "awaiting_payment";
         found.milestone.authorizationId = undefined;
         found.milestone.paypalOrderId = undefined;

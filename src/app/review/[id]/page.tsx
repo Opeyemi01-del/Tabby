@@ -10,6 +10,24 @@ import StatusBadge from "@/components/StatusBadge";
 import { getClientKey, isValidClientKey } from "@/lib/client-key";
 import { getDeal } from "@/lib/deals";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { cancelDeadline, clientCancelBlocker, hasSubmission } from "@/lib/release";
+import CancelButton from "@/components/CancelButton";
+import type { Milestone } from "@/lib/types";
+
+// The freelancer's note, files and the AI report for one milestone.
+function Delivery({ dealId, m }: { dealId: string; m: Milestone }) {
+  return (
+    <>
+      {m.deliveryNote && (
+        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm">
+          <span className="font-medium">Freelancer&apos;s note:</span> {m.deliveryNote}
+        </p>
+      )}
+      <DeliverableList dealId={dealId} items={m.deliverables ?? []} />
+      {m.aiCheck && <AiCheckBox check={m.aiCheck} />}
+    </>
+  );
+}
 
 export default async function ReviewPage({ params, searchParams }: PageProps<"/review/[id]">) {
   const { id } = await params;
@@ -50,19 +68,13 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
                   </div>
                 </div>
 
+                {/* A. Delivered, waiting for the client's decision */}
                 {m.status === "work_submitted" && (
                   <>
                     <p className="mt-3 text-sm text-slate-600">
-                      The freelancer delivered this milestone. Check the files below and the AI&apos;s report.
+                      The freelancer delivered this milestone. Open the files below and read the AI&apos;s report.
                     </p>
-                    {m.deliveryNote && (
-                      <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm">
-                        <span className="font-medium">Freelancer&apos;s note:</span> {m.deliveryNote}
-                      </p>
-                    )}
-                    <DeliverableList dealId={deal.id} items={m.deliverables ?? []} />
-                    {m.aiCheck && <AiCheckBox check={m.aiCheck} />}
-
+                    <Delivery dealId={deal.id} m={m} />
                     {m.reviewDeadline && m.aiCheck?.verdict === "verified" && (
                       <p className="mt-3 text-xs text-slate-500">
                         If you don&apos;t respond by{" "}
@@ -70,19 +82,76 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
                         released automatically because the AI verified the files.
                       </p>
                     )}
-
                     <ReviewActions dealId={deal.id} milestoneId={m.id} amount={m.amount} linkKey={linkKey} />
                   </>
                 )}
 
-                {m.status === "funds_held" && (
+                {/* B. Work was handed in but needs fixing (AI concerns, or the client asked) */}
+                {m.status === "funds_held" && hasSubmission(m) && (
+                  <>
+                    {m.clientFeedback ? (
+                      <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="font-semibold">You asked for fixes:</p>
+                        <p className="mt-1 whitespace-pre-wrap">{m.clientFeedback}</p>
+                        {m.fixDeadline && (
+                          <p className="mt-2 text-xs">
+                            The freelancer has until{" "}
+                            <span suppressHydrationWarning className="font-medium">
+                              {formatDateTime(m.fixDeadline)}
+                            </span>{" "}
+                            to send a fix. If they don&apos;t, you can cancel and get your money back.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="font-semibold">The AI found problems with this delivery</p>
+                        <p className="mt-1">
+                          The freelancer has been asked to fix them. You can look at the work now, add your own
+                          comments, or approve it anyway if you&apos;re happy with it.
+                        </p>
+                      </div>
+                    )}
+                    <Delivery dealId={deal.id} m={m} />
+                    <ReviewActions dealId={deal.id} milestoneId={m.id} amount={m.amount} linkKey={linkKey} flagged />
+                  </>
+                )}
+
+                {/* C. Paid and held, nothing delivered yet */}
+                {m.status === "funds_held" && !hasSubmission(m) && (
                   <p className="mt-3 text-sm text-slate-600">
-                    {m.clientFeedback
-                      ? "You asked for changes. Your payment stays held until you approve the new delivery."
-                      : "Your payment is held. You'll review the work here once it's delivered."}
+                    Your payment is held. The work is due{" "}
+                    <span suppressHydrationWarning>{formatDateTime(cancelDeadline(m))}</span>, and you&apos;ll review
+                    it here.
                   </p>
                 )}
-                {m.status === "released" && <p className="mt-3 text-sm text-brand-700">Approved and paid ✓</p>}
+
+                {/* Missed deadline: the client may take their money back */}
+                {clientCancelBlocker(m) === null && (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    <p className="font-semibold">
+                      {m.clientFeedback ? "No fix arrived in time." : "The due date has passed without a delivery."}
+                    </p>
+                    <p className="mt-1">You can cancel this milestone. PayPal releases the hold, so you&apos;re not charged.</p>
+                    <CancelButton dealId={deal.id} milestoneId={m.id} amount={m.amount} who="client" linkKey={linkKey} />
+                  </div>
+                )}
+
+                {/* D. Paid out — the client keeps access to what they paid for */}
+                {m.status === "released" && (
+                  <>
+                    <p className="mt-3 text-sm text-brand-700">Approved and paid ✓ Your files stay available here.</p>
+                    <DeliverableList dealId={deal.id} items={m.deliverables ?? []} />
+                  </>
+                )}
+
+                {/* E. Cancelled */}
+                {m.status === "refunded" && (
+                  <p className="mt-3 text-sm text-slate-600">
+                    Cancelled{m.refundedBy === "freelancer" ? " by the freelancer" : ""} — PayPal released the hold, so
+                    you weren&apos;t charged for this milestone.
+                  </p>
+                )}
               </section>
             ))}
           </div>

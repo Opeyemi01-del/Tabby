@@ -77,6 +77,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
       milestone.status = "work_submitted";
       milestone.reviewDeadline = reviewDeadlineFromNow();
       milestone.clientFeedback = undefined; // this new delivery answers it
+      milestone.fixDeadline = undefined; // the fix arrived in time
     }
     saveDeal(deal);
     return Response.json({ status: milestone.status, aiCheck, deliverables });

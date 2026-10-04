@@ -12,9 +12,10 @@ type Props = {
   milestoneId: string;
   amount: number;
   linkKey?: string; // the key from a private review link, if that's how they arrived
+  flagged?: boolean; // the AI found problems: approving means "approve anyway"
 };
 
-export default function ReviewActions({ dealId, milestoneId, amount, linkKey }: Props) {
+export default function ReviewActions({ dealId, milestoneId, amount, linkKey, flagged }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"buttons" | "feedback">("buttons");
   const [feedback, setFeedback] = useState("");
@@ -44,24 +45,27 @@ export default function ReviewActions({ dealId, milestoneId, amount, linkKey }: 
             disabled={busy}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            {busy ? "Releasing via PayPal…" : `Approve & release ${formatMoney(amount)}`}
+            {busy ? "Releasing via PayPal…" : `${flagged ? "Approve anyway" : "Approve"} & release ${formatMoney(amount)}`}
           </button>
           <button
             onClick={() => setMode("feedback")}
             disabled={busy}
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50"
           >
-            Request changes
+            Ask for fixes
           </button>
         </div>
       ) : (
         <div>
           <label className="text-sm font-medium" htmlFor={`fb-${milestoneId}`}>
-            What needs to change?
+            What needs to be fixed?
           </label>
+          <p className="text-xs text-slate-500">
+            Be specific — e.g. &ldquo;Template 2: make the logo bigger&rdquo;. Your payment stays held while they fix it.
+          </p>
           <textarea
             id={`fb-${milestoneId}`}
-            rows={3}
+            rows={4}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
