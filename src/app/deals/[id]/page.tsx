@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import MilestoneCard from "@/components/MilestoneCard";
 import Timeline from "@/components/Timeline";
+import Naira from "@/components/Naira";
 import { dealStatus, dealTotal, getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 import { autoReleaseBlocker } from "@/lib/release";
@@ -30,9 +31,13 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
             <p className="text-slate-600">
               {deal.clientName} · {deal.clientEmail} · started {formatDate(deal.createdAt)}
             </p>
+            {deal.jobType === "onsite" && (
+              <p className="mt-1 text-sm text-slate-600">🔧 On-site job{deal.jobLocation ? ` · ${deal.jobLocation}` : ""}</p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <p className="text-xl font-semibold tabular-nums">{formatMoney(dealTotal(deal))}</p>
+            <Naira usd={dealTotal(deal)} />
             <StatusBadge status={dealStatus(deal)} />
           </div>
         </div>

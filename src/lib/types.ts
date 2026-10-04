@@ -47,8 +47,17 @@ export type Deliverable = {
   aiNote?: string; // why not, if it couldn't
 };
 
+// "work" = something is delivered. "materials" = money for parts, paid
+// before an on-site job starts (released when the client confirms it began).
+export type MilestoneKind = "work" | "materials";
+
+// "digital" = files/links (design, writing...). "onsite" = physical work at
+// a place (plumbing, wiring, repairs...), proven with before/after photos.
+export type JobType = "digital" | "onsite";
+
 export type Milestone = {
   id: string;
+  kind?: MilestoneKind; // missing = "work"
   title: string;
   amount: number;
   dueDate: string; // ISO date, e.g. "2026-10-20"
@@ -116,6 +125,8 @@ export type Deal = {
   currency: "USD";
   createdAt: string;
   agreement: string; // the client chat the deal was created from
+  jobType?: JobType; // missing = "digital"
+  jobLocation?: string; // on-site only: the area, e.g. "Surulere, Lagos" (no full address)
   milestones: Milestone[];
   // Fingerprint (SHA-256) of the secret review key given to whoever paid.
   // The key itself is never stored, so even the database can't leak it.

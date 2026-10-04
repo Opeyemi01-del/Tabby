@@ -35,6 +35,8 @@ export async function POST(req: Request) {
   const clientName = text(body.clientName);
   const clientEmail = text(body.clientEmail);
   const agreement = text(body.agreement);
+  const jobType = body.jobType === "onsite" ? "onsite" : "digital";
+  const jobLocation = jobType === "onsite" ? text(body.jobLocation).slice(0, 80) : "";
   const rawMilestones = Array.isArray(body.milestones) ? body.milestones : [];
 
   if (!title || !clientName) return jsonError("Project title and client name are required");
@@ -56,6 +58,8 @@ export async function POST(req: Request) {
     }
     milestones.push({
       id: `m-${i + 1}`,
+      // "materials" only makes sense for on-site jobs.
+      kind: jobType === "onsite" && m.kind === "materials" ? "materials" : "work",
       title: text(m.title),
       amount,
       dueDate: isoDateInDays(dueInDays),
@@ -71,6 +75,8 @@ export async function POST(req: Request) {
     currency: "USD",
     createdAt: isoDateInDays(0),
     agreement,
+    jobType,
+    ...(jobLocation ? { jobLocation } : {}),
     milestones,
   };
 

@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import Naira from "@/components/Naira";
 import type { DraftDeal } from "@/lib/ai";
 import { postForm, postJson } from "@/lib/client-api";
 import { formatMoney } from "@/lib/format";
@@ -103,15 +104,17 @@ export default function NewDealPage() {
   }
 
   // Updates one field of one milestone when you edit it.
-  function updateMilestone(index: number, field: "title" | "amount" | "dueInDays", value: string) {
+  function updateMilestone(index: number, field: "title" | "amount" | "dueInDays" | "kind", value: string) {
     if (!draft) return;
-    const milestones = draft.milestones.map((m, i) =>
-      i === index ? { ...m, [field]: field === "title" ? value : Number(value) } : m,
-    );
+    const isText = field === "title" || field === "kind";
+    const milestones = draft.milestones.map((m, i) => (i === index ? { ...m, [field]: isText ? value : Number(value) } : m));
     setDraft({ ...draft, milestones });
   }
 
   const total = draft ? draft.milestones.reduce((sum, m) => sum + m.amount, 0) : 0;
+  // Column layout of the milestone rows (an extra "Type" column for on-site jobs).
+  const milestoneGrid =
+    draft?.jobType === "onsite" ? "grid-cols-[7rem_1fr_6rem_5rem]" : "grid-cols-[1fr_7rem_6rem]";
 
   return (
     <>
@@ -286,15 +289,63 @@ export default function NewDealPage() {
               />
             </div>
 
+            {/* Job type: digital work vs on-site job (plumbing, repairs...) */}
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium">Job type</span>
+              <div className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
+                {(["digital", "onsite"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        jobType: t,
+                        // Materials milestones only exist for on-site jobs.
+                        milestones: t === "digital" ? draft.milestones.map((m) => ({ ...m, kind: "work" })) : draft.milestones,
+                      })
+                    }
+                    className={`rounded-md px-3 py-1.5 ${draft.jobType === t ? "bg-white shadow-sm" : "text-slate-600"}`}
+                  >
+                    {t === "digital" ? "💻 Digital work" : "🔧 On-site job"}
+                  </button>
+                ))}
+              </div>
+              {draft.jobType === "onsite" && (
+                <input
+                  className={`${inputClass} sm:w-60`}
+                  placeholder="Area, e.g. Surulere, Lagos"
+                  value={draft.jobLocation}
+                  onChange={(e) => setDraft({ ...draft, jobLocation: e.target.value })}
+                />
+              )}
+            </div>
+            {draft.jobType === "onsite" && (
+              <p className="mt-1 text-xs text-slate-500">
+                On-site jobs are proven with before/after photos, and the client confirms with a completion code. Only
+                the area is shown — never the full address.
+              </p>
+            )}
+
             <h3 className="mt-5 text-sm font-medium">Milestones</h3>
-            <div className="mt-1 grid grid-cols-[1fr_7rem_6rem] gap-2 text-xs text-slate-500">
+            <div className={`mt-1 grid ${milestoneGrid} gap-2 text-xs text-slate-500`}>
+              {draft.jobType === "onsite" && <span>Type</span>}
               <span>What&apos;s delivered</span>
               <span>Amount ($)</span>
               <span>Due in (days)</span>
             </div>
             <div className="mt-1 flex flex-col gap-2">
               {draft.milestones.map((m, i) => (
-                <div key={i} className="grid grid-cols-[1fr_7rem_6rem] gap-2">
+                <div key={i} className={`grid ${milestoneGrid} gap-2`}>
+                  {draft.jobType === "onsite" && (
+                    <select
+                      className={inputClass}
+                      value={m.kind}
+                      onChange={(e) => updateMilestone(i, "kind", e.target.value)}
+                    >
+                      <option value="materials">Materials</option>
+                      <option value="work">Work</option>
+                    </select>
+                  )}
                   <input
                     className={inputClass}
                     value={m.title}
@@ -321,7 +372,7 @@ export default function NewDealPage() {
 
             <div className="mt-5 flex items-center justify-between">
               <p className="text-sm">
-                Total: <span className="font-semibold">{formatMoney(total)}</span>
+                Total: <span className="font-semibold">{formatMoney(total)}</span> <Naira usd={total} />
               </p>
               <button
                 onClick={handleCreate}

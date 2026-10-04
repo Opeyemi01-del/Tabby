@@ -14,6 +14,7 @@ import StatusBadge from "./StatusBadge";
 import AiCheckBox from "./AiCheckBox";
 import DeliverableList from "./DeliverableList";
 import CancelButton from "./CancelButton";
+import Naira from "./Naira";
 import { postForm, postJson } from "@/lib/client-api";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import type { Milestone } from "@/lib/types";
@@ -87,6 +88,7 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
         </div>
         <div className="flex flex-col items-end gap-1">
           <p className="font-semibold tabular-nums">{formatMoney(milestone.amount)}</p>
+          <Naira usd={milestone.amount} />
           <StatusBadge status={status} />
         </div>
       </div>

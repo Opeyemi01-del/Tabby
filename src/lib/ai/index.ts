@@ -6,7 +6,7 @@
 // Server-only: uses the secret API key.
 import { generateJson } from "./gemini"; // swap this import to change AI provider
 import type { Evidence } from "../deliverables";
-import type { AiCheck, Deal, EvidenceItem, Milestone } from "../types";
+import type { AiCheck, Deal, EvidenceItem, JobType, Milestone, MilestoneKind } from "../types";
 
 // Shared rule: chats and notes come from other people, so the AI must
 // treat them as information, never as instructions to follow.
@@ -20,7 +20,9 @@ export type DraftDeal = {
   title: string;
   clientName: string;
   clientEmail: string;
-  milestones: { title: string; amount: number; dueInDays: number }[];
+  jobType: JobType;
+  jobLocation: string;
+  milestones: { title: string; amount: number; dueInDays: number; kind: MilestoneKind }[];
   // Only for screenshots: the conversation as the AI read it, so the
   // freelancer can check and fix it. It becomes the deal's agreement.
   transcript?: string;
@@ -44,6 +46,10 @@ export async function extractDeal(input: { chat?: string; images?: ChatImage[] }
       "If the chat gives a total and a split (e.g. 50% upfront), create one milestone per part. " +
       "If something is not stated, leave text fields empty rather than guessing. " +
       "Milestone due dates are days from today; default to 7 if not stated. " +
+      "jobType is 'onsite' for physical work done at a place (plumbing, electrical, repairs, painting, tailoring, " +
+      "cleaning, building...), otherwise 'digital'. For onsite jobs, jobLocation is the town/area if mentioned " +
+      "(never a full street address); else empty. If money is paid upfront to buy parts or materials before " +
+      "on-site work starts, that milestone's kind is 'materials'; every other milestone's kind is 'work'. " +
       (images.length
         ? "The conversation is given as chat screenshots (e.g. WhatsApp), in order. In `transcript`, write out the " +
           "messages you read as 'Name: message' lines, exactly as written, skipping times and read receipts. " +
@@ -69,6 +75,8 @@ export async function extractDeal(input: { chat?: string; images?: ChatImage[] }
         title: { type: "STRING", description: "Short project name" },
         clientName: { type: "STRING" },
         clientEmail: { type: "STRING" },
+        jobType: { type: "STRING", enum: ["digital", "onsite"] },
+        jobLocation: { type: "STRING", description: "Town/area for on-site jobs, never a full address" },
         milestones: {
           type: "ARRAY",
           items: {
@@ -77,8 +85,9 @@ export async function extractDeal(input: { chat?: string; images?: ChatImage[] }
               title: { type: "STRING", description: "What is delivered in this milestone" },
               amount: { type: "NUMBER" },
               dueInDays: { type: "INTEGER" },
+              kind: { type: "STRING", enum: ["work", "materials"] },
             },
-            required: ["title", "amount", "dueInDays"],
+            required: ["title", "amount", "dueInDays", "kind"],
           },
         },
       },
@@ -87,13 +96,21 @@ export async function extractDeal(input: { chat?: string; images?: ChatImage[] }
         "title",
         "clientName",
         "clientEmail",
+        "jobType",
+        "jobLocation",
         "milestones",
       ],
     },
   });
 
   // Never trust AI output blindly: drop nonsense amounts and screenshot numbers.
-  draft.milestones = draft.milestones.filter((m) => Number.isFinite(m.amount) && m.amount > 0);
+  draft.milestones = draft.milestones
+    .filter((m) => Number.isFinite(m.amount) && m.amount > 0)
+    .map((m) => ({ ...m, kind: m.kind === "materials" && draft.jobType === "onsite" ? "materials" : "work" }));
+  if (draft.jobType !== "onsite") {
+    draft.jobType = "digital";
+    draft.jobLocation = "";
+  }
   if (draft.unreadable) {
     draft.unreadable = [...new Set(draft.unreadable)].filter((n) => Number.isInteger(n) && n >= 1 && n <= images.length);
   }

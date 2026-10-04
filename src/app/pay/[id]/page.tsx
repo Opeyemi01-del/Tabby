@@ -5,6 +5,7 @@ import { getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import PayPalButton from "@/components/PayPalButton";
+import Naira from "@/components/Naira";
 import Link from "next/link";
 import { getClientKey, isValidClientKey } from "@/lib/client-key";
 
@@ -30,6 +31,12 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <p className="text-sm text-slate-500">Payment request for {deal.clientName}</p>
         <h1 className="mt-1 text-2xl font-semibold">{deal.title}</h1>
+        {deal.jobType === "onsite" && (
+          <p className="mt-1 text-sm text-slate-600">
+            🔧 On-site job{deal.jobLocation ? ` · ${deal.jobLocation}` : ""} — proven with before/after photos, and
+            confirmed on-site with a completion code
+          </p>
+        )}
 
         {/* All milestones, so the client sees the full plan */}
         <ul className="mt-5 divide-y divide-slate-100 text-sm">
@@ -51,7 +58,10 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
           <>
             <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
               <span className="font-medium">Due now</span>
-              <span className="text-2xl font-semibold tabular-nums">{formatMoney(dueNow.amount)}</span>
+              <span className="flex flex-col items-end">
+                <span className="text-2xl font-semibold tabular-nums">{formatMoney(dueNow.amount)}</span>
+                <Naira usd={dueNow.amount} />
+              </span>
             </div>
 
             {paypalClientId ? (
