@@ -16,6 +16,8 @@ export async function generateJson<T>(input: {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set in .env.local");
   const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  // Backup model, used when the main one is busy (503) or out of quota (429).
+  const fallback = process.env.GEMINI_FALLBACK_MODEL;
 
   // The prompt first, then each attachment introduced by its label.
   const parts: object[] = [{ text: input.prompt }];
@@ -24,7 +26,7 @@ export async function generateJson<T>(input: {
     parts.push({ inlineData: { mimeType: a.mimeType, data: a.base64 } });
   }
 
-  const res = await fetchWithRetry(`${API_BASE}/${encodeURIComponent(model)}:generateContent`, {
+  const request: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
@@ -37,12 +39,17 @@ export async function generateJson<T>(input: {
         temperature: 0.2, // low = more consistent answers
       },
     }),
-  });
+  };
+  const callModel = (name: string) =>
+    fetchWithRetry(`${API_BASE}/${encodeURIComponent(name)}:generateContent`, request);
 
-  if (res.status === 429) {
-    console.warn("Gemini 429:", (await res.text()).slice(0, 300));
-    throw new Error("AI usage limit reached (free tier) — wait a little, or try again later today");
+  let res = await callModel(model);
+  if ((res.status === 429 || res.status === 503) && fallback && fallback !== model) {
+    console.warn(`Gemini ${model} returned ${res.status}; trying backup model ${fallback}`);
+    res = await callModel(fallback);
   }
+
+  if (res.status === 429) throw new Error(quotaMessage(await res.text()));
   if (res.status === 503) {
     throw new Error("The AI is busy right now — please try again in a minute");
   }
@@ -59,6 +66,32 @@ export async function generateJson<T>(input: {
     throw new Error(`Gemini returned no answer (finish reason: ${data.candidates?.[0]?.finishReason ?? "unknown"})`);
   }
   return JSON.parse(text) as T;
+}
+
+// Explains a 429 "limit reached" error in plain words. Google says which
+// limit was hit (per minute or per day) and how long to wait.
+function quotaMessage(body: string): string {
+  console.warn("Gemini 429:", body.slice(0, 600));
+  let limit = "";
+  let retrySeconds = 0;
+  try {
+    const details = (JSON.parse(body).error?.details ?? []) as Record<string, unknown>[];
+    for (const d of details) {
+      const violations = d.violations as { quotaId?: string; quotaMetric?: string }[] | undefined;
+      if (violations?.[0]) limit = `${violations[0].quotaId ?? ""} ${violations[0].quotaMetric ?? ""}`;
+      if (typeof d.retryDelay === "string") retrySeconds = parseFloat(d.retryDelay);
+    }
+  } catch {
+    // not JSON — fall through to the general message
+  }
+
+  if (/PerDay/i.test(limit)) {
+    return "Today's free AI limit is used up. It resets at midnight US Pacific time (around 8 AM in Nigeria).";
+  }
+  if (/PerMinute/i.test(limit) || retrySeconds > 0) {
+    return `Too many AI requests in a short time — try again in ${Math.max(1, Math.ceil(retrySeconds || 60))} seconds.`;
+  }
+  return "AI usage limit reached (free tier) — wait a little, or try again later today";
 }
 
 // Tries up to 3 times when the network drops, a try takes over 90s,
