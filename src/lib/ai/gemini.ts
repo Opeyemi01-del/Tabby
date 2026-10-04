@@ -17,7 +17,8 @@ export async function generateJson<T>(input: {
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set in .env.local");
   const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   // Backup model, used when the main one is busy (503) or out of quota (429).
-  const fallback = process.env.GEMINI_FALLBACK_MODEL;
+  // On by default; set GEMINI_FALLBACK_MODEL= (empty) in .env.local to turn it off.
+  const fallback = process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash-lite";
 
   // The prompt first, then each attachment introduced by its label.
   const parts: object[] = [{ text: input.prompt }];
