@@ -47,6 +47,15 @@ export type Deliverable = {
   aiNote?: string; // why not, if it couldn't
 };
 
+// After the client's payment is captured, Tabby forwards it to the
+// freelancer's own PayPal account with PayPal Payouts.
+export type Payout = {
+  status: "pending" | "sent" | "failed";
+  amount: number;
+  batchId?: string; // PayPal's payout batch id
+  error?: string; // why it failed (shown with a "Try again" button)
+};
+
 // "work" = something is delivered. "materials" = money for parts, paid
 // before an on-site job starts (released when the client confirms it began).
 export type MilestoneKind = "work" | "materials";
@@ -71,6 +80,8 @@ export type Milestone = {
   clientFeedback?: string; // set when the client asks for changes
   fixDeadline?: string; // after this, the client may cancel if no fix arrived
   releasedBy?: "client" | "auto"; // who triggered the payout
+  netAmount?: number; // what Tabby actually received after PayPal's fee
+  payout?: Payout; // sending the money on to the freelancer's own PayPal
   refundedBy?: "client" | "freelancer"; // who cancelled the hold
   // PayPal references, filled in as the payment moves along:
   paypalOrderId?: string; // created when the client starts paying
@@ -104,6 +115,7 @@ export type EventType =
   | "changes_requested"
   | "released"
   | "refunded"
+  | "payout_sent"
   | "dispute_opened"
   | "evidence_submitted";
 
@@ -125,6 +137,10 @@ export type Deal = {
   currency: "USD";
   createdAt: string;
   agreement: string; // the client chat the deal was created from
+  // The freelancer's PayPal email — where their money is sent. Set only
+  // when the deal is created (there are no logins yet, so allowing changes
+  // later would let anyone redirect the money).
+  payoutEmail?: string;
   jobType?: JobType; // missing = "digital"
   jobLocation?: string; // on-site only: the area, e.g. "Surulere, Lagos" (no full address)
   milestones: Milestone[];

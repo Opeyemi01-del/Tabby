@@ -56,7 +56,7 @@ async function getAccessToken(): Promise<string> {
 // Sends an authenticated JSON request and turns PayPal errors into PayPalError.
 async function paypalRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown; requestId?: string } = {},
+  options: { method?: string; body?: unknown; requestId?: string; prefer?: string } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${await getAccessToken()}`,
@@ -65,6 +65,7 @@ async function paypalRequest<T>(
   // Same requestId twice = PayPal does the action only once (protects
   // against double-charging if a request is retried).
   if (options.requestId) headers["PayPal-Request-Id"] = options.requestId;
+  if (options.prefer) headers.Prefer = options.prefer;
 
   const res = await fetch(`${BASE}${path}`, {
     method: options.method ?? "GET",
@@ -122,13 +123,67 @@ export async function authorizeOrder(orderId: string): Promise<{ authorizationId
   return { authorizationId: auth.id, status: auth.status };
 }
 
-// Step 3: release the held money to the freelancer.
-export async function captureAuthorization(authorizationId: string): Promise<{ captureId: string; status: string }> {
-  const capture = await paypalRequest<{ id: string; status: string }>(
-    `/v2/payments/authorizations/${encodeURIComponent(authorizationId)}/capture`,
-    { method: "POST", body: { final_capture: true }, requestId: `capture-${authorizationId}` },
+// Step 3: release the held money. `netAmount` is what actually arrives
+// after PayPal's fee — that's what we can forward to the freelancer.
+export async function captureAuthorization(
+  authorizationId: string,
+): Promise<{ captureId: string; status: string; netAmount?: number }> {
+  const capture = await paypalRequest<{
+    id: string;
+    status: string;
+    seller_receivable_breakdown?: { net_amount?: { value: string } };
+  }>(`/v2/payments/authorizations/${encodeURIComponent(authorizationId)}/capture`, {
+    method: "POST",
+    body: { final_capture: true },
+    requestId: `capture-${authorizationId}`,
+    prefer: "return=representation", // ask for the full details, including the fee breakdown
+  });
+  const net = Number(capture.seller_receivable_breakdown?.net_amount?.value);
+  return { captureId: capture.id, status: capture.status, netAmount: Number.isFinite(net) ? net : undefined };
+}
+
+// --- Payouts: forward the money to the freelancer's own PayPal -----------
+
+// Sends money to a PayPal account by email. `batchKey` must be unique per
+// payment: PayPal refuses a second batch with the same key, so a retry can
+// never pay the freelancer twice.
+export async function createPayout(input: {
+  email: string;
+  amount: number;
+  note: string;
+  batchKey: string;
+}): Promise<{ batchId: string; status: string }> {
+  const result = await paypalRequest<{ batch_header: { payout_batch_id: string; batch_status: string } }>(
+    "/v1/payments/payouts",
+    {
+      method: "POST",
+      body: {
+        sender_batch_header: {
+          sender_batch_id: input.batchKey,
+          email_subject: "You've been paid through Tabby",
+          email_message: input.note,
+        },
+        items: [
+          {
+            recipient_type: "EMAIL",
+            receiver: input.email,
+            amount: { value: input.amount.toFixed(2), currency: "USD" },
+            note: input.note.slice(0, 4000),
+            sender_item_id: input.batchKey,
+          },
+        ],
+      },
+    },
   );
-  return { captureId: capture.id, status: capture.status };
+  return { batchId: result.batch_header.payout_batch_id, status: result.batch_header.batch_status };
+}
+
+// Current state of a payout batch, e.g. PENDING, PROCESSING, SUCCESS, DENIED.
+export async function getPayoutStatus(batchId: string): Promise<string> {
+  const result = await paypalRequest<{ batch_header: { batch_status: string } }>(
+    `/v1/payments/payouts/${encodeURIComponent(batchId)}`,
+  );
+  return result.batch_header.batch_status;
 }
 
 // Cancel a hold (e.g. the deal is called off) — the client keeps their money.

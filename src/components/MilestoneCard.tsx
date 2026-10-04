@@ -15,6 +15,7 @@ import AiCheckBox from "./AiCheckBox";
 import DeliverableList from "./DeliverableList";
 import CancelButton from "./CancelButton";
 import Naira from "./Naira";
+import PayoutStatus from "./PayoutStatus";
 import { postForm, postJson } from "@/lib/client-api";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import type { Milestone } from "@/lib/types";
@@ -24,12 +25,13 @@ type Props = {
   clientName: string;
   milestone: Milestone;
   releaseReady: boolean; // worked out on the server: verified + review period over
+  hasPayoutEmail: boolean; // does the deal say where to send the freelancer's money?
 };
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
 
-export default function MilestoneCard({ dealId, clientName, milestone, releaseReady }: Props) {
+export default function MilestoneCard({ dealId, clientName, milestone, releaseReady, hasPayoutEmail }: Props) {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [links, setLinks] = useState("");
@@ -231,6 +233,9 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
           )}
         </div>
       )}
+
+      {/* Where the money went: forwarded to the freelancer's own PayPal */}
+      {status === "released" && <PayoutStatus dealId={dealId} milestone={milestone} hasPayoutEmail={hasPayoutEmail} />}
 
       {/* The freelancer can always back out before payout */}
       {(status === "funds_held" || status === "work_submitted") && (

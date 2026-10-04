@@ -35,6 +35,10 @@ export async function POST(req: Request) {
   const clientName = text(body.clientName);
   const clientEmail = text(body.clientEmail);
   const agreement = text(body.agreement);
+  const payoutEmail = text(body.payoutEmail).toLowerCase();
+  if (payoutEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payoutEmail)) {
+    return jsonError("Enter a valid PayPal email for your payouts");
+  }
   const jobType = body.jobType === "onsite" ? "onsite" : "digital";
   const jobLocation = jobType === "onsite" ? text(body.jobLocation).slice(0, 80) : "";
   const rawMilestones = Array.isArray(body.milestones) ? body.milestones : [];
@@ -75,6 +79,7 @@ export async function POST(req: Request) {
     currency: "USD",
     createdAt: isoDateInDays(0),
     agreement,
+    ...(payoutEmail ? { payoutEmail } : {}),
     jobType,
     ...(jobLocation ? { jobLocation } : {}),
     milestones,

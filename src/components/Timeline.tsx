@@ -26,6 +26,7 @@ const kinds: Record<EventType, { icon: string; color: string }> = {
   changes_requested: { icon: "↺", color: "bg-amber-500" },
   released: { icon: "✓", color: "bg-brand-600" },
   refunded: { icon: "↩", color: "bg-slate-500" },
+  payout_sent: { icon: "→", color: "bg-emerald-600" },
   dispute_opened: { icon: "!", color: "bg-red-600" },
   evidence_submitted: { icon: "⚖", color: "bg-slate-700" },
 };

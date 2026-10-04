@@ -25,6 +25,18 @@ export function dealStatus(deal: Deal): Status {
   return deal.milestones.some((m) => m.status === "released") ? "released" : "refunded";
 }
 
+// Is anything in this deal still waiting for someone? (Used to decide
+// whether pages should keep checking for updates.)
+export function dealIsActive(deal: Deal): boolean {
+  return deal.milestones.some(
+    (m) =>
+      m.status === "awaiting_payment" ||
+      m.status === "funds_held" ||
+      m.status === "work_submitted" ||
+      (m.status === "released" && m.payout?.status === "pending"),
+  );
+}
+
 // Adds up money across all deals, grouped by milestone status
 // (used for the numbers at the top of the dashboard).
 export function totalsByStatus(deals: Deal[]): Record<Status, number> {

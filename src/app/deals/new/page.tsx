@@ -16,6 +16,7 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
 
 const MAX_SCREENSHOTS = 3;
+const PAYOUT_EMAIL_KEY = "tabby-payout-email";
 
 // LOOK OF THE "COULDN'T READ" WARNINGS — edit these to restyle them.
 const warningStyles = {
@@ -39,6 +40,17 @@ export default function NewDealPage() {
   const [draft, setDraft] = useState<DraftDeal | null>(null);
   // Preview URLs of screenshots the AI couldn't read (removing one clears it).
   const [unreadableUrls, setUnreadableUrls] = useState<string[]>([]);
+  // The freelancer's PayPal email (where payouts go), remembered between
+  // deals. Filled in from this browser's memory when the draft appears.
+  const [payoutEmail, setPayoutEmail] = useState("");
+  function recallPayoutEmail() {
+    if (payoutEmail) return;
+    try {
+      setPayoutEmail(localStorage.getItem(PAYOUT_EMAIL_KEY) ?? "");
+    } catch {
+      // storage blocked — the field just starts empty
+    }
+  }
   const [loading, setLoading] = useState(false); // AI is drafting
   const [saving, setSaving] = useState(false); // deal is being saved
   const [error, setError] = useState("");
@@ -59,6 +71,7 @@ export default function NewDealPage() {
 
   // Sends the chat (text or screenshots) to the AI and shows its draft.
   async function handleExtract() {
+    recallPayoutEmail();
     setLoading(true);
     setError("");
     try {
@@ -86,13 +99,19 @@ export default function NewDealPage() {
     setError("");
     try {
       const agreement = mode === "text" ? chat : (draft.transcript ?? "");
+      const deal = { ...draft, agreement, payoutEmail };
+      try {
+        localStorage.setItem(PAYOUT_EMAIL_KEY, payoutEmail); // remember for next time (this browser only)
+      } catch {
+        // storage blocked (e.g. private window) — not a problem
+      }
       let id: string;
       if (mode === "text") {
-        ({ id } = await postJson<{ id: string }>("/api/deals", { ...draft, agreement }));
+        ({ id } = await postJson<{ id: string }>("/api/deals", deal));
       } else {
         // Also send the original screenshots: kept privately as dispute evidence.
         const form = new FormData();
-        form.append("deal", JSON.stringify({ ...draft, agreement }));
+        form.append("deal", JSON.stringify(deal));
         shots.forEach((s) => form.append("screenshots", s.file));
         ({ id } = await postForm<{ id: string }>("/api/deals", form));
       }
@@ -368,6 +387,25 @@ export default function NewDealPage() {
                   />
                 </div>
               ))}
+            </div>
+
+            {/* Where the freelancer gets paid */}
+            <div className="mt-5">
+              <label htmlFor="payoutEmail" className="text-sm font-medium">
+                Your PayPal email <span className="font-normal text-slate-500">(where you get paid)</span>
+              </label>
+              <input
+                id="payoutEmail"
+                type="email"
+                className={`${inputClass} mt-1 sm:w-80`}
+                placeholder="you@example.com"
+                value={payoutEmail}
+                onChange={(e) => setPayoutEmail(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                When the client approves, Tabby sends the money here with PayPal Payouts. For safety it can&apos;t be
+                changed after the deal is created.
+              </p>
             </div>
 
             <div className="mt-5 flex items-center justify-between">

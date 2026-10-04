@@ -8,7 +8,8 @@ import DeliverableList from "@/components/DeliverableList";
 import ReviewActions from "@/components/ReviewActions";
 import StatusBadge from "@/components/StatusBadge";
 import { getClientKey, isValidClientKey } from "@/lib/client-key";
-import { getDeal } from "@/lib/deals";
+import { dealIsActive, getDeal } from "@/lib/deals";
+import AutoRefresh from "@/components/AutoRefresh";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { cancelDeadline, clientCancelBlocker, hasSubmission } from "@/lib/release";
 import CancelButton from "@/components/CancelButton";
@@ -40,6 +41,7 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-12">
+      {allowed && <AutoRefresh active={dealIsActive(deal)} />}
       <p className="text-center text-xl font-bold text-brand-700">Tabby</p>
 
       {!allowed ? (

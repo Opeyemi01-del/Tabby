@@ -2,8 +2,9 @@
 // (a dispute is opened, a payment completes, a hold is cancelled...).
 // Every event is verified with PayPal first so nobody can fake one.
 import { handleError, jsonError } from "@/lib/api";
-import { findByPaypalPayment, saveDeal } from "@/lib/db";
+import { findByPaypalPayment, findByPayoutBatch, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
+import { sendPayout } from "@/lib/payout";
 import { verifyWebhook } from "@/lib/paypal";
 
 type WebhookEvent = {
@@ -14,6 +15,7 @@ type WebhookEvent = {
     reason?: string;
     create_time?: string;
     disputed_transactions?: { seller_transaction_id?: string }[];
+    batch_header?: { payout_batch_id?: string };
   };
 };
 
@@ -55,11 +57,26 @@ export async function POST(req: Request) {
       break;
     }
 
-    // A capture that was PENDING has now completed.
+    // A capture that was PENDING has now completed: mark it paid and
+    // forward the money to the freelancer.
     case "PAYMENT.CAPTURE.COMPLETED": {
       const found = r.id ? findByPaypalPayment(r.id) : undefined;
-      if (found && found.milestone.status === "work_submitted") {
+      if (found && found.milestone.captureId === r.id && found.milestone.status !== "released") {
         found.milestone.status = "released";
+        saveDeal(found.deal);
+        await sendPayout(found.deal, found.milestone);
+      }
+      break;
+    }
+
+    // A payout to a freelancer finished (or failed) at PayPal.
+    case "PAYMENT.PAYOUTSBATCH.SUCCESS":
+    case "PAYMENT.PAYOUTSBATCH.DENIED": {
+      const batchId = r.batch_header?.payout_batch_id;
+      const found = batchId ? findByPayoutBatch(batchId) : undefined;
+      if (found?.milestone.payout) {
+        found.milestone.payout.status = event.event_type.endsWith("SUCCESS") ? "sent" : "failed";
+        if (found.milestone.payout.status === "failed") found.milestone.payout.error = "PayPal denied the payout";
         saveDeal(found.deal);
       }
       break;

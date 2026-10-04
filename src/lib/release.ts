@@ -12,6 +12,7 @@
 import { captureAuthorization, voidAuthorization } from "./paypal";
 import { saveDeal } from "./db";
 import { addEvent } from "./events";
+import { sendPayout } from "./payout";
 import type { Deal, Milestone } from "./types";
 
 // How long the client has to review. Set REVIEW_PERIOD_HOURS in .env.local
@@ -103,8 +104,9 @@ export function autoReleaseBlocker(m: Milestone): string | null {
 // Captures the held PayPal payment and records who released it.
 export async function releaseMilestone(deal: Deal, m: Milestone, by: "client" | "auto") {
   if (!m.authorizationId) throw new Error("No PayPal hold found for this milestone");
-  const { captureId, status } = await captureAuthorization(m.authorizationId);
+  const { captureId, status, netAmount } = await captureAuthorization(m.authorizationId);
   m.captureId = captureId;
+  m.netAmount = netAmount;
   m.releasedBy = by;
   addEvent(deal, {
     type: "released",
@@ -118,5 +120,7 @@ export async function releaseMilestone(deal: Deal, m: Milestone, by: "client" | 
   // PENDING can happen in sandbox (e.g. review); the webhook finishes it.
   if (status === "COMPLETED") m.status = "released";
   saveDeal(deal);
-  return { status: m.status, paypalStatus: status };
+  // Forward the money to the freelancer's own PayPal (never throws).
+  await sendPayout(deal, m);
+  return { status: m.status, paypalStatus: status, payout: m.payout };
 }

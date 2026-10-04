@@ -3,7 +3,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
 import DealCard from "@/components/DealCard";
-import { getAllDeals, totalsByStatus } from "@/lib/deals";
+import { dealIsActive, getAllDeals, totalsByStatus } from "@/lib/deals";
+import AutoRefresh from "@/components/AutoRefresh";
 import { formatMoney } from "@/lib/format";
 
 // Always read fresh data from the database (never a cached copy).
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   return (
     <>
       <Navbar />
+      <AutoRefresh active={deals.some(dealIsActive)} seconds={15} />
       <main className="mx-auto w-full max-w-5xl px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Dashboard</h1>

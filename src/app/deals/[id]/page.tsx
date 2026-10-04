@@ -7,7 +7,8 @@ import StatusBadge from "@/components/StatusBadge";
 import MilestoneCard from "@/components/MilestoneCard";
 import Timeline from "@/components/Timeline";
 import Naira from "@/components/Naira";
-import { dealStatus, dealTotal, getDeal } from "@/lib/deals";
+import { dealIsActive, dealStatus, dealTotal, getDeal } from "@/lib/deals";
+import AutoRefresh from "@/components/AutoRefresh";
 import { formatDate, formatMoney } from "@/lib/format";
 import { autoReleaseBlocker } from "@/lib/release";
 
@@ -19,6 +20,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   return (
     <>
       <Navbar />
+      <AutoRefresh active={dealIsActive(deal)} />
       <main className="mx-auto w-full max-w-3xl px-4 py-8">
         <Link href="/dashboard" className="text-sm text-slate-500 hover:text-slate-900">
           ← Back to dashboard
@@ -52,6 +54,11 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
           <Link href={`/pay/${deal.id}`} className="mt-2 inline-block font-mono text-brand-700 underline">
             /pay/{deal.id}
           </Link>
+          <p className="mt-3 border-t border-slate-100 pt-3 text-slate-600">
+            {deal.payoutEmail
+              ? `💸 When the client approves, your money is sent to your PayPal: ${deal.payoutEmail}`
+              : "⚠ No payout email on this deal — approved money stays in Tabby's PayPal account."}
+          </p>
         </div>
 
         {/* Milestones */}
@@ -64,6 +71,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               clientName={deal.clientName}
               milestone={m}
               releaseReady={autoReleaseBlocker(m) === null}
+              hasPayoutEmail={Boolean(deal.payoutEmail)}
             />
           ))}
         </div>

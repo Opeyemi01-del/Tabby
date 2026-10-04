@@ -68,6 +68,15 @@ export function findByPaypalPayment(paymentId: string) {
   return undefined;
 }
 
+// Finds the deal a PayPal payout batch belongs to.
+export function findByPayoutBatch(batchId: string) {
+  for (const deal of listDeals()) {
+    const milestone = deal.milestones.find((m) => m.payout?.batchId === batchId);
+    if (milestone) return { deal, milestone };
+  }
+  return undefined;
+}
+
 export function newDealId(): string {
   return `d-${Date.now().toString(36)}`;
 }
