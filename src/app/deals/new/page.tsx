@@ -132,8 +132,11 @@ export default function NewDealPage() {
 
   const total = draft ? draft.milestones.reduce((sum, m) => sum + m.amount, 0) : 0;
   // Column layout of the milestone rows (an extra "Type" column for on-site jobs).
+  // Phones: the description gets its own line, the small fields share the next.
   const milestoneGrid =
-    draft?.jobType === "onsite" ? "grid-cols-[7rem_1fr_6rem_5rem]" : "grid-cols-[1fr_7rem_6rem]";
+    draft?.jobType === "onsite"
+      ? "grid-cols-3 sm:grid-cols-[7rem_1fr_6rem_5rem]"
+      : "grid-cols-2 sm:grid-cols-[1fr_7rem_6rem]";
 
   return (
     <>
@@ -346,7 +349,7 @@ export default function NewDealPage() {
             )}
 
             <h3 className="mt-5 text-sm font-medium">Milestones</h3>
-            <div className={`mt-1 grid ${milestoneGrid} gap-2 text-xs text-slate-500`}>
+            <div className={`mt-1 hidden ${milestoneGrid} gap-2 text-xs text-slate-500 sm:grid`}>
               {draft.jobType === "onsite" && <span>Type</span>}
               <span>What&apos;s delivered</span>
               <span>Amount ($)</span>
@@ -354,9 +357,13 @@ export default function NewDealPage() {
             </div>
             <div className="mt-1 flex flex-col gap-2">
               {draft.milestones.map((m, i) => (
-                <div key={i} className={`grid ${milestoneGrid} gap-2`}>
+                <div
+                  key={i}
+                  className={`grid ${milestoneGrid} gap-2 border-b border-slate-100 pb-3 sm:border-0 sm:pb-0`}
+                >
                   {draft.jobType === "onsite" && (
                     <select
+                      aria-label="Milestone type"
                       className={inputClass}
                       value={m.kind}
                       onChange={(e) => updateMilestone(i, "kind", e.target.value)}
@@ -365,12 +372,17 @@ export default function NewDealPage() {
                       <option value="work">Work</option>
                     </select>
                   )}
+                  {/* Phones: first and full width. Larger screens: its normal column. */}
                   <input
-                    className={inputClass}
+                    aria-label="What's delivered"
+                    placeholder="What's delivered"
+                    className={`${inputClass} order-first col-span-full sm:order-none sm:col-span-1`}
                     value={m.title}
                     onChange={(e) => updateMilestone(i, "title", e.target.value)}
                   />
                   <input
+                    aria-label="Amount in dollars"
+                    placeholder="Amount ($)"
                     className={inputClass}
                     type="number"
                     min={1}
@@ -378,6 +390,8 @@ export default function NewDealPage() {
                     onChange={(e) => updateMilestone(i, "amount", e.target.value)}
                   />
                   <input
+                    aria-label="Due in days"
+                    placeholder="Days"
                     className={inputClass}
                     type="number"
                     min={1}

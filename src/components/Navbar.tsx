@@ -15,12 +15,13 @@ export default function Navbar() {
         <Link href="/" className="text-xl font-bold text-brand-700">
           Tabby
         </Link>
-        <div className="flex gap-1 text-sm font-medium">
+        {/* Smaller text and padding on phones, so the links stay on one line */}
+        <div className="flex gap-0.5 text-[13px] font-medium sm:gap-1 sm:text-sm">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              className="whitespace-nowrap rounded-lg px-2 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:px-3"
             >
               {link.label}
             </Link>

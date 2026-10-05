@@ -14,7 +14,7 @@ const styles: Record<Status, { label: string; className: string }> = {
 export default function StatusBadge({ status }: { status: Status }) {
   const { label, className } = styles[status];
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${className}`}>
+    <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${className}`}>
       {label}
     </span>
   );
