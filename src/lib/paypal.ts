@@ -23,6 +23,26 @@ export class PayPalError extends Error {
   }
 }
 
+// --- Network ----------------------------------------------------------------
+
+// fetch() with up to 3 tries when the internet connection drops or a try
+// takes over 30s. Only connection failures are retried — never PayPal's own
+// answers. Safe for money actions: they carry a PayPal-Request-Id, so
+// PayPal performs each one at most once even if it's sent again.
+async function paypalFetch(url: string, init: RequestInit, attempts = 3): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, { ...init, signal: AbortSignal.timeout(30_000) });
+    } catch (err) {
+      if (attempt >= attempts) {
+        console.error("PayPal network error:", err);
+        throw new PayPalError("Couldn't reach PayPal — check the internet connection and try again", 503);
+      }
+      await new Promise((r) => setTimeout(r, attempt * 1500));
+    }
+  }
+}
+
 // --- Authentication -------------------------------------------------------
 
 let cachedToken: { value: string; expiresAt: number } | undefined;
@@ -37,7 +57,7 @@ async function getAccessToken(): Promise<string> {
     throw new PayPalError("PayPal keys missing: set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env.local", 500);
   }
 
-  const res = await fetch(`${BASE}/v1/oauth2/token`, {
+  const res = await paypalFetch(`${BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`,
@@ -67,7 +87,7 @@ async function paypalRequest<T>(
   if (options.requestId) headers["PayPal-Request-Id"] = options.requestId;
   if (options.prefer) headers.Prefer = options.prefer;
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await paypalFetch(`${BASE}${path}`, {
     method: options.method ?? "GET",
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -220,7 +240,7 @@ export async function provideDisputeEvidence(disputeId: string, notes: string): 
     }),
   );
 
-  const res = await fetch(`${BASE}/v1/customer/disputes/${encodeURIComponent(disputeId)}/provide-evidence`, {
+  const res = await paypalFetch(`${BASE}/v1/customer/disputes/${encodeURIComponent(disputeId)}/provide-evidence`, {
     method: "POST",
     headers: { Authorization: `Bearer ${await getAccessToken()}` },
     body: form,

@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: "Tabby — get paid for every milestone",
   description:
     "Tabby holds client payments with PayPal and uses AI to check delivery and defend disputes.",
+  // Stop iPhones turning PayPal IDs, amounts and dates into phone/date
+  // links. They edit the page to do it, which clashes with React.
+  formatDetection: { telephone: false, date: false, email: false, address: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
