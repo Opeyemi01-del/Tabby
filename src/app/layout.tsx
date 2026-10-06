@@ -26,9 +26,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // suppressHydrationWarning: browsers sometimes add their own attributes
+    // to <html> (e.g. Chrome on iPhone adds __gcrremoteframetoken). This
+    // tells React to ignore that — for this one tag only, not its contents.
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
