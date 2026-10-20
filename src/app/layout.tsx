@@ -3,6 +3,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { NairaRateProvider } from "@/components/NairaRate";
+import { ngnPerUsd } from "@/lib/rate";
+
+// Build every page when it's visited (not once at build time), so settings
+// like the naira rate are always current. All of Tabby's pages show live
+// data anyway.
+export const dynamic = "force-dynamic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <NairaRateProvider rate={ngnPerUsd()}>{children}</NairaRateProvider>
+      </body>
     </html>
   );
 }

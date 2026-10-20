@@ -36,9 +36,8 @@ services:
         sync: false
       - key: GEMINI_FALLBACK_MODEL
         sync: false
-      # Read while BUILDING (it's shown in the browser), so after changing
-      # it, redeploy for it to take effect.
-      - key: NEXT_PUBLIC_NGN_PER_USD
+      # Naira per 1 USD, e.g. 1329 (digits only)
+      - key: NGN_PER_USD
         sync: false
       # Short timers so the demo doesn't wait 3 days
       - key: REVIEW_PERIOD_HOURS
