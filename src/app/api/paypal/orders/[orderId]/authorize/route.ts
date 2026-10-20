@@ -7,6 +7,7 @@ import { handleError, jsonError } from "@/lib/api";
 import { newClientKey, setClientKeyCookie } from "@/lib/client-key";
 import { findByPaypalOrder, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
+import { newCompletionCode, usesCompletionCode } from "@/lib/onsite";
 import { authorizeOrder } from "@/lib/paypal";
 
 export async function POST(_req: Request, ctx: RouteContext<"/api/paypal/orders/[orderId]/authorize">) {
@@ -23,6 +24,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/paypal/orders/
 
     milestone.authorizationId = authorizationId;
     milestone.status = "funds_held";
+    // On-site jobs: the code the payer sends to whoever is at the place.
+    if (usesCompletionCode(deal, milestone)) milestone.completionCode ??= newCompletionCode();
     addEvent(deal, {
       type: "payment_held",
       milestoneId: milestone.id,

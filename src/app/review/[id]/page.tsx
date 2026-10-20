@@ -4,6 +4,7 @@
 // when they paid (cookie), or they open the private link (?key=...).
 import { notFound } from "next/navigation";
 import AiCheckBox from "@/components/AiCheckBox";
+import BeforeAfter from "@/components/BeforeAfter";
 import DeliverableList from "@/components/DeliverableList";
 import ReviewActions from "@/components/ReviewActions";
 import StatusBadge from "@/components/StatusBadge";
@@ -11,11 +12,12 @@ import { getClientKey, isValidClientKey } from "@/lib/client-key";
 import { dealIsActive, getDeal } from "@/lib/deals";
 import AutoRefresh from "@/components/AutoRefresh";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { codeConfirms, usesCompletionCode } from "@/lib/onsite";
 import { cancelDeadline, clientCancelBlocker, hasSubmission } from "@/lib/release";
 import CancelButton from "@/components/CancelButton";
 import type { Milestone } from "@/lib/types";
 
-// The freelancer's note, files and the AI report for one milestone.
+// The freelancer's note, files (or before/after photos) and the AI report for one milestone.
 function Delivery({ dealId, m }: { dealId: string; m: Milestone }) {
   return (
     <>
@@ -24,7 +26,17 @@ function Delivery({ dealId, m }: { dealId: string; m: Milestone }) {
           <span className="font-medium">Freelancer&apos;s note:</span> {m.deliveryNote}
         </p>
       )}
-      <DeliverableList dealId={dealId} items={m.deliverables ?? []} />
+      {m.beforePhotos?.length ? (
+        <BeforeAfter
+          dealId={dealId}
+          before={m.beforePhotos}
+          after={m.deliverables}
+          startedAt={m.startedAt}
+          submittedAt={m.submittedAt}
+        />
+      ) : (
+        <DeliverableList dealId={dealId} items={m.deliverables ?? []} />
+      )}
       {m.aiCheck && <AiCheckBox check={m.aiCheck} />}
     </>
   );
@@ -69,6 +81,29 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
                     <StatusBadge status={m.status} />
                   </div>
                 </div>
+
+                {/* On-site jobs: the code to send to whoever is at the place */}
+                {usesCompletionCode(deal, m) && m.confirmedOnsiteAt && (
+                  <p className="mt-3 rounded-lg bg-teal-50 p-3 text-sm text-teal-900">
+                    ⌂ {m.kind === "materials" ? "Materials confirmed at the place" : "Confirmed on-site"}{" "}
+                    <span suppressHydrationWarning>{formatDateTime(m.confirmedOnsiteAt)}</span> — the artisan entered
+                    your completion code.
+                  </p>
+                )}
+                {usesCompletionCode(deal, m) &&
+                  m.completionCode &&
+                  !m.confirmedOnsiteAt &&
+                  (m.status === "funds_held" || m.status === "work_submitted") && (
+                    <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">
+                      <p className="font-semibold">Completion code</p>
+                      <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em]">{m.completionCode}</p>
+                      <p className="mt-1">
+                        Send this to the person at the place (family, a neighbour). They give it to the artisan only
+                        once they&apos;ve checked {codeConfirms(m)}. It&apos;s a confirmation from the place — you
+                        still approve the payment here.
+                      </p>
+                    </div>
+                  )}
 
                 {/* A. Delivered, waiting for the client's decision */}
                 {m.status === "work_submitted" && (
@@ -121,11 +156,17 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
 
                 {/* C. Paid and held, nothing delivered yet */}
                 {m.status === "funds_held" && !hasSubmission(m) && (
-                  <p className="mt-3 text-sm text-slate-600">
-                    Your payment is held. The work is due{" "}
-                    <span suppressHydrationWarning>{formatDateTime(cancelDeadline(m))}</span>, and you&apos;ll review
-                    it here.
-                  </p>
+                  <>
+                    <p className="mt-3 text-sm text-slate-600">
+                      Your payment is held.{" "}
+                      {m.beforePhotos?.length ? "The artisan has started — here's how the place looked. " : ""}The
+                      work is due <span suppressHydrationWarning>{formatDateTime(cancelDeadline(m))}</span>, and
+                      you&apos;ll review it here.
+                    </p>
+                    {m.beforePhotos?.length ? (
+                      <BeforeAfter dealId={deal.id} before={m.beforePhotos} startedAt={m.startedAt} />
+                    ) : null}
+                  </>
                 )}
 
                 {/* Missed deadline: the client may take their money back */}
@@ -143,7 +184,17 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
                 {m.status === "released" && (
                   <>
                     <p className="mt-3 text-sm text-brand-700">Approved and paid ✓ Your files stay available here.</p>
-                    <DeliverableList dealId={deal.id} items={m.deliverables ?? []} />
+                    {m.beforePhotos?.length ? (
+                      <BeforeAfter
+                        dealId={deal.id}
+                        before={m.beforePhotos}
+                        after={m.deliverables}
+                        startedAt={m.startedAt}
+                        submittedAt={m.submittedAt}
+                      />
+                    ) : (
+                      <DeliverableList dealId={deal.id} items={m.deliverables ?? []} />
+                    )}
                   </>
                 )}
 

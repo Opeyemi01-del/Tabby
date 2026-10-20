@@ -21,8 +21,10 @@ const timelineStyles = {
 const kinds: Record<EventType, { icon: string; color: string }> = {
   deal_created: { icon: "✎", color: "bg-slate-500" },
   payment_held: { icon: "$", color: "bg-sky-600" },
+  work_started: { icon: "▶", color: "bg-teal-600" },
   work_submitted: { icon: "↑", color: "bg-violet-600" },
   ai_checked: { icon: "AI", color: "bg-indigo-600" },
+  onsite_confirmed: { icon: "⌂", color: "bg-teal-600" },
   changes_requested: { icon: "↺", color: "bg-amber-500" },
   released: { icon: "✓", color: "bg-brand-600" },
   refunded: { icon: "↩", color: "bg-slate-500" },

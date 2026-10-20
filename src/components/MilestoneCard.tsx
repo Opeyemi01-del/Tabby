@@ -16,6 +16,8 @@ import DeliverableList from "./DeliverableList";
 import CancelButton from "./CancelButton";
 import Naira from "./Naira";
 import PayoutStatus from "./PayoutStatus";
+import BeforeAfter from "./BeforeAfter";
+import PhotoCapture, { appendShots, type Shot } from "./PhotoCapture";
 import { postForm, postJson } from "@/lib/client-api";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import type { Milestone } from "@/lib/types";
@@ -26,32 +28,42 @@ type Props = {
   milestone: Milestone;
   releaseReady: boolean; // worked out on the server: verified + review period over
   hasPayoutEmail: boolean; // does the deal say where to send the freelancer's money?
+  usesCode: boolean; // on-site jobs: confirmed with the completion code
+  usesPhotos: boolean; // on-site work: proven with before/after photos instead of files
 };
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
 
-export default function MilestoneCard({ dealId, clientName, milestone, releaseReady, hasPayoutEmail }: Props) {
+export default function MilestoneCard({ dealId, clientName, milestone, releaseReady, hasPayoutEmail, usesCode, usesPhotos }: Props) {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [links, setLinks] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [busy, setBusy] = useState<"" | "checking" | "releasing">("");
+  const [beforeShots, setBeforeShots] = useState<Shot[]>([]);
+  const [afterShots, setAfterShots] = useState<Shot[]>([]);
+  const [retaking, setRetaking] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState<"" | "checking" | "releasing" | "confirming" | "starting">("");
   const [error, setError] = useState("");
 
-  const { status, aiCheck, deliverables = [] } = milestone;
+  const { status, aiCheck, deliverables = [], beforePhotos = [] } = milestone;
   const apiBase = `/api/deals/${dealId}/milestones/${milestone.id}`;
 
-  // Sends the work: note + files + links (one per line).
+  // Sends the work: note + files + links (one per line), or the after photos.
   async function handleSubmit() {
     const form = new FormData();
     form.append("deliveryNote", note);
-    files.forEach((f) => form.append("files", f));
-    links
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .forEach((l) => form.append("links", l));
+    if (usesPhotos) {
+      appendShots(form, afterShots);
+    } else {
+      files.forEach((f) => form.append("files", f));
+      links
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .forEach((l) => form.append("links", l));
+    }
 
     setBusy("checking");
     setError("");
@@ -60,6 +72,24 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
       setNote("");
       setLinks("");
       setFiles([]);
+      setAfterShots([]);
+      router.refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setBusy("");
+  }
+
+  // On-site work: upload the before photos ("Start job").
+  async function handleStart() {
+    const form = new FormData();
+    appendShots(form, beforeShots);
+    setBusy("starting");
+    setError("");
+    try {
+      await postForm(`${apiBase}/start`, form);
+      setBeforeShots([]);
+      setRetaking(false);
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -79,7 +109,25 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
     setBusy("");
   }
 
+  // The artisan types in the code the person at the place gave them.
+  async function handleConfirmCode() {
+    setBusy("confirming");
+    setError("");
+    try {
+      await postJson(`${apiBase}/confirm-code`, { code });
+      setCode("");
+      router.refresh();
+    } catch (err) {
+      setError((err as Error).message);
+      router.refresh(); // shows the lock if that was the last try
+    }
+    setBusy("");
+  }
+
   const nothingToSend = files.length === 0 && links.trim() === "";
+  const codeOpen = usesCode && (status === "funds_held" || status === "work_submitted");
+  const codeLocked = (milestone.codeTries ?? 0) >= 5;
+  const isMaterials = milestone.kind === "materials";
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -124,62 +172,143 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
           )}
           {aiCheck && (
             <>
-              <DeliverableList dealId={dealId} items={deliverables} />
+              {usesPhotos ? (
+                <BeforeAfter
+                  dealId={dealId}
+                  before={beforePhotos}
+                  after={deliverables}
+                  startedAt={milestone.startedAt}
+                  submittedAt={milestone.submittedAt}
+                />
+              ) : (
+                <DeliverableList dealId={dealId} items={deliverables} />
+              )}
               <AiCheckBox check={aiCheck} />
             </>
           )}
 
-          <p className="mt-3 text-sm text-slate-600">
-            The client&apos;s money is held. Upload the actual work — the AI checks the real files, not just your
-            description.
-          </p>
+          {usesPhotos && (beforePhotos.length === 0 || retaking) ? (
+            // On-site, step 1: photograph the place before starting.
+            <>
+              <p className="mt-3 text-sm text-slate-600">
+                The client&apos;s money is held. <span className="font-medium">Before you start</span>, photograph the
+                place as it is now (e.g. the leaking pipe). The AI compares these with your photos when you finish.
+              </p>
+              <PhotoCapture label="Take before photos" shots={beforeShots} onChange={setBeforeShots} />
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={handleStart}
+                  disabled={busy !== "" || beforeShots.length === 0}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {busy === "starting" ? "Uploading photos…" : retaking ? "Save new before photos" : "Start job"}
+                </button>
+                {retaking && (
+                  <button onClick={() => setRetaking(false)} className="px-3 py-2 text-sm text-slate-600">
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </>
+          ) : usesPhotos ? (
+            // On-site, step 2: photograph the finished job.
+            <>
+              {!aiCheck && (
+                <BeforeAfter dealId={dealId} before={beforePhotos} startedAt={milestone.startedAt} />
+              )}
+              {!milestone.submittedAt && (
+                <button onClick={() => setRetaking(true)} className="mt-1 text-xs text-slate-500 underline">
+                  Retake before photos
+                </button>
+              )}
+              <p className="mt-3 text-sm text-slate-600">
+                When the job is done, photograph <span className="font-medium">the same spots from the same angles</span>.
+                The AI checks the change against what you agreed.
+              </p>
+              <PhotoCapture label="Take after photos" shots={afterShots} onChange={setAfterShots} />
+              <label className="mt-3 block text-sm font-medium">
+                Note to the client <span className="font-normal text-slate-500">(optional)</span>
+                <textarea
+                  rows={2}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What you did, parts used, anything to watch"
+                  className={inputClass}
+                />
+              </label>
+              <button
+                onClick={handleSubmit}
+                disabled={busy !== "" || afterShots.length === 0}
+                className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {busy === "checking" ? "AI is comparing the photos…" : "Finish job & submit for AI check"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-slate-600">
+                The client&apos;s money is held. Upload the actual work — the AI checks the real files, not just your
+                description.
+              </p>
 
-          <label className="mt-3 block text-sm font-medium">
-            Files <span className="font-normal text-slate-500">(images, PDF, text, SVG — up to 5 files, 8 MB each)</span>
-            <input
-              type="file"
-              multiple
-              accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.md,.csv,.json,.html,.css,.svg,.zip,.docx,.fig"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="mt-1 block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2"
-            />
-          </label>
+              <label className="mt-3 block text-sm font-medium">
+                Files <span className="font-normal text-slate-500">(images, PDF, text, SVG — up to 5 files, 8 MB each)</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.md,.csv,.json,.html,.css,.svg,.zip,.docx,.fig"
+                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                  className="mt-1 block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2"
+                />
+              </label>
 
-          <label className="mt-3 block text-sm font-medium">
-            Links <span className="font-normal text-slate-500">(live site, public Google Doc, repo — one per line)</span>
-            <textarea
-              rows={2}
-              value={links}
-              onChange={(e) => setLinks(e.target.value)}
-              placeholder="https://"
-              className={`${inputClass} font-mono`}
-            />
-          </label>
+              <label className="mt-3 block text-sm font-medium">
+                Links <span className="font-normal text-slate-500">(live site, public Google Doc, repo — one per line)</span>
+                <textarea
+                  rows={2}
+                  value={links}
+                  onChange={(e) => setLinks(e.target.value)}
+                  placeholder="https://"
+                  className={`${inputClass} font-mono`}
+                />
+              </label>
 
-          <label className="mt-3 block text-sm font-medium">
-            Note to the client <span className="font-normal text-slate-500">(optional)</span>
-            <textarea
-              rows={2}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Anything they should know about this delivery"
-              className={inputClass}
-            />
-          </label>
+              <label className="mt-3 block text-sm font-medium">
+                Note to the client <span className="font-normal text-slate-500">(optional)</span>
+                <textarea
+                  rows={2}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Anything they should know about this delivery"
+                  className={inputClass}
+                />
+              </label>
 
-          <button
-            onClick={handleSubmit}
-            disabled={busy !== "" || nothingToSend}
-            className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            {busy === "checking" ? "AI is inspecting the work…" : "Submit work for AI check"}
-          </button>
+              <button
+                onClick={handleSubmit}
+                disabled={busy !== "" || nothingToSend}
+                className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {busy === "checking" ? "AI is inspecting the work…" : "Submit work for AI check"}
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {status === "work_submitted" && (
         <div className="mt-3">
-          <DeliverableList dealId={dealId} items={deliverables} />
+          {usesPhotos ? (
+            <BeforeAfter
+              dealId={dealId}
+              before={beforePhotos}
+              after={deliverables}
+              startedAt={milestone.startedAt}
+              submittedAt={milestone.submittedAt}
+            />
+          ) : (
+            <DeliverableList dealId={dealId} items={deliverables} />
+          )}
           {aiCheck && <AiCheckBox check={aiCheck} />}
 
           {releaseReady ? (
@@ -230,6 +359,48 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
             >
               🛡 View certificate
             </Link>
+          )}
+        </div>
+      )}
+
+      {/* On-site jobs: confirmation from the person at the place */}
+      {usesCode && milestone.confirmedOnsiteAt && (
+        <p className="mt-3 rounded-lg bg-teal-50 p-3 text-sm text-teal-900">
+          ⌂ {isMaterials ? "Materials confirmed at the place" : "Confirmed on-site"}{" "}
+          <span suppressHydrationWarning>{formatDateTime(milestone.confirmedOnsiteAt)}</span> — the completion code was
+          entered.
+        </p>
+      )}
+      {codeOpen && !milestone.confirmedOnsiteAt && (
+        <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">
+          <p className="font-semibold">Completion code</p>
+          {codeLocked ? (
+            <p className="mt-1">Too many wrong codes, so it&apos;s locked. {clientName} can still approve the job.</p>
+          ) : (
+            <>
+              <p className="mt-1">
+                {isMaterials ? "When the materials are at the place" : "When the job is done"}, ask the person there
+                for the 6-digit code {clientName} sent them, and enter it here.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono tracking-widest focus:border-brand-500 focus:outline-none"
+                />
+                <button
+                  onClick={handleConfirmCode}
+                  disabled={busy !== "" || code.length !== 6}
+                  className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+                >
+                  {busy === "confirming" ? "Checking…" : isMaterials ? "Confirm materials arrived" : "Confirm on-site"}
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}

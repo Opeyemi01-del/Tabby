@@ -10,6 +10,7 @@ import Naira from "@/components/Naira";
 import { dealIsActive, dealStatus, dealTotal, getDeal } from "@/lib/deals";
 import AutoRefresh from "@/components/AutoRefresh";
 import { formatDate, formatMoney } from "@/lib/format";
+import { usesCompletionCode, usesPhotos, withoutCode } from "@/lib/onsite";
 import { autoReleaseBlocker } from "@/lib/release";
 
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
@@ -69,7 +70,9 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               key={m.id}
               dealId={deal.id}
               clientName={deal.clientName}
-              milestone={m}
+              milestone={withoutCode(m)}
+              usesCode={usesCompletionCode(deal, m)}
+              usesPhotos={usesPhotos(deal, m)}
               releaseReady={autoReleaseBlocker(m) === null}
               hasPayoutEmail={Boolean(deal.payoutEmail)}
             />

@@ -45,6 +45,7 @@ export type Deliverable = {
   sha256?: string; // fingerprint: proves the file wasn't changed later
   aiReadable: boolean; // could the AI actually open it?
   aiNote?: string; // why not, if it couldn't
+  takenAt?: string; // on-site photos: when the phone says it was taken
 };
 
 // After the client's payment is captured, Tabby forwards it to the
@@ -83,6 +84,16 @@ export type Milestone = {
   netAmount?: number; // what Tabby actually received after PayPal's fee
   payout?: Payout; // sending the money on to the freelancer's own PayPal
   refundedBy?: "client" | "freelancer"; // who cancelled the hold
+  // On-site jobs: a 6-digit code only the payer sees. They send it to
+  // whoever is at the place; that person gives it to the artisan once
+  // they're happy. Never shown on the artisan's page.
+  completionCode?: string;
+  codeTries?: number; // wrong guesses so far (locks at 5)
+  confirmedOnsiteAt?: string; // ISO date-time the right code was entered
+  // On-site work: photos taken when the job started (the "after" photos
+  // are the deliverables). The AI compares the two.
+  beforePhotos?: Deliverable[];
+  startedAt?: string; // ISO date-time the before photos were uploaded
   // PayPal references, filled in as the payment moves along:
   paypalOrderId?: string; // created when the client starts paying
   authorizationId?: string; // the "hold" on the client's money
@@ -110,8 +121,10 @@ export type Dispute = {
 export type EventType =
   | "deal_created"
   | "payment_held"
+  | "work_started"
   | "work_submitted"
   | "ai_checked"
+  | "onsite_confirmed"
   | "changes_requested"
   | "released"
   | "refunded"

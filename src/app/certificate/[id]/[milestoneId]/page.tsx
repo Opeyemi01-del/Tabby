@@ -95,6 +95,15 @@ export default async function CertificatePage({ params }: PageProps<"/certificat
                   : "—"}
             </dd>
           </div>
+          {m.confirmedOnsiteAt && (
+            <div>
+              <dt className="text-slate-500">On-site check</dt>
+              <dd suppressHydrationWarning>
+                {m.kind === "materials" ? "Materials arrival confirmed" : "Confirmed"} with completion code ·{" "}
+                {formatDateTime(m.confirmedOnsiteAt)}
+              </dd>
+            </div>
+          )}
           <div>
             <dt className="text-slate-500">PayPal payment</dt>
             <dd className="font-mono">{mask(m.captureId)}</dd>
@@ -116,9 +125,23 @@ export default async function CertificatePage({ params }: PageProps<"/certificat
         )}
 
         {/* File fingerprints (no downloads) */}
+        {m.beforePhotos && m.beforePhotos.length > 0 && (
+          <>
+            <h3 className="mt-6 text-sm font-semibold">Before photos &amp; fingerprints</h3>
+            <ul className="mt-2 flex flex-col gap-1 font-mono text-xs text-slate-600">
+              {m.beforePhotos.map((d) => (
+                <li key={d.id} className="break-all">
+                  {d.name} · {d.sha256 ? short(d.sha256) : "not fingerprinted"}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         {m.deliverables && m.deliverables.length > 0 && (
           <>
-            <h3 className="mt-6 text-sm font-semibold">Delivered items &amp; fingerprints</h3>
+            <h3 className="mt-6 text-sm font-semibold">
+              {m.beforePhotos?.length ? "After photos" : "Delivered items"} &amp; fingerprints
+            </h3>
             <ul className="mt-2 flex flex-col gap-1 font-mono text-xs text-slate-600">
               {m.deliverables.map((d) => (
                 <li key={d.id} className="break-all">

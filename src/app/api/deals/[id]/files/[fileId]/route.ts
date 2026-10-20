@@ -1,4 +1,5 @@
-// GET /api/deals/{id}/files/{fileId} — download a delivered file.
+// GET /api/deals/{id}/files/{fileId} — download a delivered file (or an
+// on-site "before" photo).
 // Images open in the browser; everything else downloads, so an uploaded
 // HTML or SVG file can never run scripts on Tabby's pages.
 import { jsonError } from "@/lib/api";
@@ -10,7 +11,7 @@ const SAFE_TO_SHOW = ["image/png", "image/jpeg", "image/webp"];
 export async function GET(_req: Request, ctx: RouteContext<"/api/deals/[id]/files/[fileId]">) {
   const { id, fileId } = await ctx.params;
   const file = findDeal(id)
-    ?.milestones.flatMap((m) => m.deliverables ?? [])
+    ?.milestones.flatMap((m) => [...(m.beforePhotos ?? []), ...(m.deliverables ?? [])])
     .find((d) => d.id === fileId && d.kind === "file");
   if (!file) return jsonError("File not found", 404);
 

@@ -25,6 +25,17 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+// On-site photos: a warning if the photo is much older than its upload
+// (likely picked from the gallery), else null. 30 minutes of slack.
+export function staleNote(takenAt: string | undefined, uploadedAt: string | undefined): string | null {
+  if (!uploadedAt) return null;
+  if (!takenAt) return "No capture time — may not be a fresh photo";
+  const minutes = (Date.parse(uploadedAt) - Date.parse(takenAt)) / 60_000;
+  if (minutes <= 30) return null;
+  const age = minutes < 120 ? `${Math.round(minutes)} min` : minutes < 2880 ? `${Math.round(minutes / 60)} h` : `${Math.round(minutes / 1440)} days`;
+  return `Taken ${age} before upload — may not be a fresh photo`;
+}
+
 // "2026-10-10" -> "Oct 10, 2026"
 export function formatDate(isoDate: string): string {
   return new Date(isoDate + "T00:00:00").toLocaleDateString("en-US", {
