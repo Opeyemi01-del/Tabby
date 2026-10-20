@@ -1,0 +1,47 @@
+# RENDER BLUEPRINT — tells Render how to build and run Tabby.
+# On render.com: New > Blueprint > pick this repo. Render asks for every
+# value marked "sync: false" (secrets are never stored in this file).
+#
+# Free plan: the server sleeps after 15 minutes without visitors, and its
+# disk is wiped on every restart or deploy. The database then starts
+# again from the sample deals (see src/lib/db.ts).
+services:
+  - type: web
+    name: tabby
+    runtime: node
+    plan: free
+    region: frankfurt # closest Render region to Nigeria
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0 # needs the built-in SQLite (node:sqlite)
+      # PayPal sandbox app (developer.paypal.com > Apps & Credentials)
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_API_BASE
+        value: https://api-m.sandbox.paypal.com
+      # Created after the first deploy, once the site has a public URL
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      # AI
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
+      - key: GEMINI_FALLBACK_MODEL
+        sync: false
+      # Read while BUILDING (it's shown in the browser), so after changing
+      # it, redeploy for it to take effect.
+      - key: NEXT_PUBLIC_NGN_PER_USD
+        sync: false
+      # Short timers so the demo doesn't wait 3 days
+      - key: REVIEW_PERIOD_HOURS
+        value: "0.05"
+      - key: FIX_PERIOD_HOURS
+        value: "0.05"

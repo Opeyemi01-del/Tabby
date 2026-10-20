@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   // page's scripts for other addresses, so buttons like PayPal never load.
   // Wildcards cover a new address if the router assigns a different one.
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
+  // This folder is the project root (stops Next.js picking up a stray
+  // package-lock.json from a parent folder).
+  turbopack: { root: __dirname },
 };
 
 export default nextConfig;
