@@ -29,15 +29,19 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/disp
     if (submit) {
       if (dispute.status !== "open") return jsonError("Evidence was already submitted", 409);
       const notes = dispute.evidence.map((e, i) => `${i + 1}. ${e.title}: ${e.detail}`).join("\n");
-      const sentAs = await respondToDispute(dispute.id, notes);
+      // Sample deals have a made-up dispute that PayPal doesn't know, so
+      // the submission is only simulated (and says so).
+      const sentAs = deal.sample ? "simulated" : await respondToDispute(dispute.id, notes);
       dispute.status = "evidence_submitted";
       addEvent(deal, {
         type: "evidence_submitted",
         milestoneId: milestone.id,
         summary:
-          sentAs === "evidence"
-            ? `Evidence pack (${dispute.evidence.length} items) sent to PayPal`
-            : `Evidence pack (${dispute.evidence.length} items) posted in the PayPal dispute conversation`,
+          sentAs === "simulated"
+            ? `Evidence pack (${dispute.evidence.length} items) submitted — simulated, this is a sample dispute`
+            : sentAs === "evidence"
+              ? `Evidence pack (${dispute.evidence.length} items) sent to PayPal`
+              : `Evidence pack (${dispute.evidence.length} items) posted in the PayPal dispute conversation`,
         proof: [`PayPal dispute ${dispute.id}`],
       });
       saveDeal(deal);

@@ -6,7 +6,7 @@
 //   verified / claimed_only -> "work_submitted": the client reviews it
 //   concerns                -> stays "funds_held" so the freelancer can fix it
 import { checkDelivery } from "@/lib/ai";
-import { handleError, jsonError } from "@/lib/api";
+import { handleError, jsonError, sampleOnly } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
 import { checkLink, LIMITS, saveUploadedFile, type Evidence } from "@/lib/deliverables";
 import { addEvent, short } from "@/lib/events";
@@ -21,6 +21,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   const deal = findDeal(id);
   const milestone = deal?.milestones.find((m) => m.id === milestoneId);
   if (!deal || !milestone) return jsonError("Milestone not found", 404);
+  if (deal.sample) return sampleOnly();
   if (milestone.status !== "funds_held") return jsonError("Work can only be submitted once the client's funds are held", 409);
 
   let form: FormData;

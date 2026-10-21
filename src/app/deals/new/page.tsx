@@ -29,6 +29,25 @@ const warningStyles = {
   icon: "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white",
 };
 
+// Ready-made chats for trying Tabby (small amounts, made-up people).
+const SAMPLE_CHATS = [
+  {
+    label: "On-site job",
+    chat:
+      "Tunde: Hi Emeka, my mum says the kitchen tap at her house in Surulere is leaking badly. I'm in London — can you fix it this week?\n" +
+      "Emeka: Yes sir. $3 for a new washer and tape, then $5 for the work.\n" +
+      "Tunde: OK. My mum will be at home and will check it before I release anything. My email is tunde@example.com.\n" +
+      "Emeka: No problem, I'll come on Thursday.",
+  },
+  {
+    label: "Digital job",
+    chat:
+      "Sarah: Can you design a simple logo for my bakery, Mensah Bakes? Brown and cream colours.\n" +
+      "You: Sure — $5, delivered as PNG and SVG within 3 days.\n" +
+      "Sarah: Deal! My email is sarah@example.com.",
+  },
+];
+
 // A chosen screenshot + a temporary URL to preview it.
 type Shot = { file: File; url: string };
 
@@ -164,9 +183,24 @@ export default function NewDealPage() {
 
           {mode === "text" ? (
             <>
-              <label htmlFor="chat" className="block text-sm font-medium">
-                Client conversation
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="chat" className="block text-sm font-medium">
+                  Client conversation
+                </label>
+                {/* For trying Tabby without a real chat at hand */}
+                <div className="flex flex-wrap gap-1 text-xs">
+                  <span className="py-1 text-slate-500">Try a sample:</span>
+                  {SAMPLE_CHATS.map((s) => (
+                    <button
+                      key={s.label}
+                      onClick={() => setChat(s.chat)}
+                      className="rounded-md border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <textarea
                 id="chat"
                 rows={7}

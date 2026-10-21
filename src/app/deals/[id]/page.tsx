@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import SampleBadge from "@/components/SampleBadge";
 import StatusBadge from "@/components/StatusBadge";
 import MilestoneCard from "@/components/MilestoneCard";
 import Timeline from "@/components/Timeline";
@@ -30,7 +31,9 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
         {/* Header */}
         <div className="mt-3 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{deal.title}</h1>
+            <h1 className="text-2xl font-semibold">
+              {deal.title} {deal.sample && <SampleBadge />}
+            </h1>
             <p className="text-slate-600">
               {deal.clientName} · {deal.clientEmail} · started {formatDate(deal.createdAt)}
             </p>
@@ -44,6 +47,17 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
             <StatusBadge status={dealStatus(deal)} />
           </div>
         </div>
+
+        {deal.sample && (
+          <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+            <span className="font-semibold">This is a sample deal</span> to show what Tabby does at each step. It has no
+            real PayPal payment behind it, so its buttons won&apos;t move money.{" "}
+            <Link href="/deals/new" className="font-medium underline">
+              Create your own deal
+            </Link>{" "}
+            to try the whole flow in the PayPal sandbox.
+          </p>
+        )}
 
         {/* Payment link to send to the client */}
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">

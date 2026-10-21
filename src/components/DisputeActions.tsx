@@ -8,7 +8,9 @@ import { useRouter } from "next/navigation";
 import { postJson } from "@/lib/client-api";
 import type { Dispute } from "@/lib/types";
 
-export default function DisputeActions({ dealId, dispute }: { dealId: string; dispute: Dispute }) {
+type Props = { dealId: string; dispute: Dispute; sample?: boolean };
+
+export default function DisputeActions({ dealId, dispute, sample }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +31,13 @@ export default function DisputeActions({ dealId, dispute }: { dealId: string; di
   }
 
   if (dispute.status !== "open") {
-    return <p className="mt-4 text-sm font-medium text-brand-700">Evidence sent to PayPal ✓ — waiting for their decision.</p>;
+    return (
+      <p className="mt-4 text-sm font-medium text-brand-700">
+        {sample
+          ? "Evidence submitted ✓ (simulated — this sample dispute isn't a real PayPal case)"
+          : "Evidence sent to PayPal ✓ — waiting for their decision."}
+      </p>
+    );
   }
 
   return (
@@ -44,7 +52,9 @@ export default function DisputeActions({ dealId, dispute }: { dealId: string; di
             ? "Sending to PayPal…"
             : "AI is building your evidence…"
           : hasEvidence
-            ? "Submit evidence to PayPal"
+            ? sample
+              ? "Submit evidence (simulated)"
+              : "Submit evidence to PayPal"
             : "Build evidence pack with AI"}
       </button>
       {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}

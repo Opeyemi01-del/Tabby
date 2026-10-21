@@ -6,6 +6,15 @@ export function jsonError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
+// The reply for actions on a sample deal (see Deal.sample).
+export function sampleOnly() {
+  return jsonError(
+    "This is a sample deal for looking around — it has no real PayPal payment behind it. To try this for real, " +
+      "create your own deal (New deal) and pay with the sandbox buyer account from the home page.",
+    403,
+  );
+}
+
 // Turns any thrown error into a sensible reply.
 export function handleError(err: unknown) {
   console.error(err);

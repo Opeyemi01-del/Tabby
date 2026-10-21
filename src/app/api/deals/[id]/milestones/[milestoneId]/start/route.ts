@@ -3,7 +3,7 @@
 // ON-SITE work: the artisan photographs the place BEFORE starting, so the
 // AI can later compare the "after" photos with how it looked.
 // Can be redone (e.g. a blurry photo) until the work is submitted.
-import { handleError, jsonError } from "@/lib/api";
+import { handleError, jsonError, sampleOnly } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
 import { photoProof, readPhotos, savePhotos, usesPhotos } from "@/lib/onsite";
@@ -13,6 +13,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   const deal = findDeal(id);
   const milestone = deal?.milestones.find((m) => m.id === milestoneId);
   if (!deal || !milestone) return jsonError("Milestone not found", 404);
+  if (deal.sample) return sampleOnly();
   if (!usesPhotos(deal, milestone)) return jsonError("Only on-site work uses before photos");
   if (milestone.status !== "funds_held") return jsonError("The job can start once the client's funds are held", 409);
   if (milestone.submittedAt) return jsonError("Work was already delivered — the before photos can't change now", 409);

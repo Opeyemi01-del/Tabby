@@ -3,6 +3,7 @@
 import { notFound } from "next/navigation";
 import { getDeal } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
+import SampleBadge from "@/components/SampleBadge";
 import StatusBadge from "@/components/StatusBadge";
 import PayPalButton from "@/components/PayPalButton";
 import Naira from "@/components/Naira";
@@ -21,7 +22,8 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
   const dueNow = deal.milestones.find((m) => m.status === "awaiting_payment");
 
   // Is this the browser that paid? Then offer the review page.
-  const isPayer = isValidClientKey(deal, await getClientKey(deal.id));
+  // (Anyone may look at a sample deal's review page.)
+  const isPayer = deal.sample || isValidClientKey(deal, await getClientKey(deal.id));
   const workToReview = deal.milestones.some((m) => m.status === "work_submitted");
 
   return (
@@ -30,7 +32,9 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <p className="text-sm text-slate-500">Payment request for {deal.clientName}</p>
-        <h1 className="mt-1 text-2xl font-semibold">{deal.title}</h1>
+        <h1 className="mt-1 text-2xl font-semibold">
+          {deal.title} {deal.sample && <SampleBadge />}
+        </h1>
         {deal.jobType === "onsite" && (
           <p className="mt-1 text-sm text-slate-600">
             🔧 On-site job{deal.jobLocation ? ` · ${deal.jobLocation}` : ""} — proven with before/after photos, and
@@ -64,7 +68,15 @@ export default async function PayPage({ params }: PageProps<"/pay/[id]">) {
               </span>
             </div>
 
-            {paypalClientId ? (
+            {deal.sample ? (
+              <p className="mt-5 rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-800">
+                This is a sample deal, so it can&apos;t be paid.{" "}
+                <Link href="/deals/new" className="font-medium underline">
+                  Create your own deal
+                </Link>{" "}
+                to try paying with the PayPal sandbox.
+              </p>
+            ) : paypalClientId ? (
               <PayPalButton dealId={deal.id} clientId={paypalClientId} />
             ) : (
               <p className="mt-5 rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-800">

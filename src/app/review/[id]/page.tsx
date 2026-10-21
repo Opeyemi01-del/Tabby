@@ -7,6 +7,7 @@ import AiCheckBox from "@/components/AiCheckBox";
 import BeforeAfter from "@/components/BeforeAfter";
 import DeliverableList from "@/components/DeliverableList";
 import ReviewActions from "@/components/ReviewActions";
+import SampleBadge from "@/components/SampleBadge";
 import StatusBadge from "@/components/StatusBadge";
 import { getClientKey, isValidClientKey } from "@/lib/client-key";
 import { dealIsActive, getDeal } from "@/lib/deals";
@@ -49,7 +50,8 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
 
   const { key: keyParam } = await searchParams;
   const linkKey = typeof keyParam === "string" ? keyParam : undefined;
-  const allowed = isValidClientKey(deal, await getClientKey(deal.id, linkKey));
+  // Sample deals have no payer, so anyone may look at their review page.
+  const allowed = deal.sample || isValidClientKey(deal, await getClientKey(deal.id, linkKey));
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-12">
@@ -68,8 +70,16 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
         <>
           <div className="mt-6">
             <p className="text-sm text-slate-500">Review for {deal.clientName}</p>
-            <h1 className="text-2xl font-semibold">{deal.title}</h1>
+            <h1 className="text-2xl font-semibold">
+              {deal.title} {deal.sample && <SampleBadge />}
+            </h1>
           </div>
+          {deal.sample && (
+            <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+              This is what the <span className="font-semibold">client who paid</span> sees for a sample deal. In a real
+              deal only the payer can open this page, and its buttons release or hold their PayPal payment.
+            </p>
+          )}
 
           <div className="mt-6 flex flex-col gap-4">
             {deal.milestones.map((m) => (

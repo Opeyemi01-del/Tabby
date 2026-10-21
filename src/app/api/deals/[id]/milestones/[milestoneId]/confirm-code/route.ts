@@ -3,7 +3,7 @@
 // Knowing the code is the proof, so no key is needed — but after 5 wrong
 // tries the code locks, so it can't be guessed.
 // A right code marks the job "confirmed on-site"; the payer still approves.
-import { jsonError, readJson } from "@/lib/api";
+import { jsonError, readJson, sampleOnly } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
 import { codeBlocker, codeConfirms, codeMatches, MAX_CODE_TRIES } from "@/lib/onsite";
@@ -13,6 +13,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   const deal = findDeal(id);
   const milestone = deal?.milestones.find((m) => m.id === milestoneId);
   if (!deal || !milestone) return jsonError("Milestone not found", 404);
+  if (deal.sample) return sampleOnly();
 
   const blocker = codeBlocker(deal, milestone);
   if (blocker) return jsonError(blocker, 409);

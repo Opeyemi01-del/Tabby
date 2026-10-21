@@ -144,6 +144,9 @@ export type DealEvent = {
 
 export type Deal = {
   id: string;
+  // A built-in example for looking around (src/lib/sample-data.ts). It has
+  // no real PayPal payments, so actions that move money are refused.
+  sample?: boolean;
   title: string;
   clientName: string;
   clientEmail: string;

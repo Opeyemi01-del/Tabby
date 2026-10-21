@@ -3,7 +3,7 @@
 // milestone goes back to the freelancer with the client's comments.
 // Works on delivered work AND on work the AI flagged with concerns.
 // Starts the fix period: if no fix arrives in time, the client may cancel.
-import { jsonError, readJson } from "@/lib/api";
+import { jsonError, readJson, sampleOnly } from "@/lib/api";
 import { getClientKey, isValidClientKey, setClientKeyCookie } from "@/lib/client-key";
 import { findDeal, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
@@ -14,6 +14,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/mile
   const deal = findDeal(id);
   const milestone = deal?.milestones.find((m) => m.id === milestoneId);
   if (!deal || !milestone) return jsonError("Milestone not found", 404);
+  if (deal.sample) return sampleOnly();
 
   const body = await readJson(req);
   const key = await getClientKey(deal.id, typeof body.key === "string" ? body.key : null);

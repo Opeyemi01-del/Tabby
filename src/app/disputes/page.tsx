@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import DisputeActions from "@/components/DisputeActions";
+import SampleBadge from "@/components/SampleBadge";
 import { getAllDeals } from "@/lib/deals";
 import { formatDate, formatMoney } from "@/lib/format";
 
@@ -33,7 +34,8 @@ export default function DisputesPage() {
                 <div>
                   <Link href={`/deals/${deal.id}`} className="font-semibold hover:underline">
                     {deal.title}
-                  </Link>
+                  </Link>{" "}
+                  {deal.sample && <SampleBadge />}
                   <p className="text-sm text-slate-500">
                     {deal.clientName} · PayPal case {dispute.id} · opened {formatDate(dispute.openedAt)}
                   </p>
@@ -71,7 +73,7 @@ export default function DisputesPage() {
                 ))}
               </ol>
 
-              <DisputeActions dealId={deal.id} dispute={dispute} />
+              <DisputeActions dealId={deal.id} dispute={dispute} sample={deal.sample} />
             </section>
           );
         })}

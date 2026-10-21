@@ -14,9 +14,10 @@ function fingerprint(e: Omit<DealEvent, "hash">): string {
 }
 
 // Adds an event to the deal (the caller still saves the deal).
-export function addEvent(deal: Deal, event: Omit<DealEvent, "at" | "prevHash" | "hash">) {
+// `at` defaults to now; the sample deals pass their own times.
+export function addEvent(deal: Deal, event: Omit<DealEvent, "at" | "prevHash" | "hash"> & { at?: string }) {
   const events = (deal.events ??= []);
-  const draft = { ...event, at: new Date().toISOString(), prevHash: events.at(-1)?.hash ?? "" };
+  const draft = { ...event, at: event.at ?? new Date().toISOString(), prevHash: events.at(-1)?.hash ?? "" };
   events.push({ ...draft, hash: fingerprint(draft) });
 }
 

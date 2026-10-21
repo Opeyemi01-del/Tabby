@@ -1,11 +1,11 @@
 // DATABASE — saves deals so they survive a page refresh.
 // Uses SQLite, which is built into Node.js (no extra install).
-// Each deal is stored as one JSON row; on first run the table is
-// filled with the sample deals so the app never starts empty.
+// Each deal is stored as one JSON row; the sample deals are added on
+// start-up so the app never looks empty (see sample-data.ts).
 // Server-only: never import this from a "use client" file.
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { sampleDeals } from "./sample-data";
+import { buildSampleDeals, LEGACY_SAMPLE_IDS } from "./sample-data";
 import type { Deal } from "./types";
 
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "tabby.db");
@@ -19,11 +19,12 @@ function db(): DatabaseSync {
   const conn = new DatabaseSync(DB_PATH);
   conn.exec("CREATE TABLE IF NOT EXISTS deals (id TEXT PRIMARY KEY, data TEXT NOT NULL)");
 
-  const { count } = conn.prepare("SELECT COUNT(*) AS count FROM deals").get() as { count: number };
-  if (count === 0) {
-    const insert = conn.prepare("INSERT INTO deals (id, data) VALUES (?, ?)");
-    for (const deal of sampleDeals) insert.run(deal.id, JSON.stringify(deal));
-  }
+  // Sample deals: add any that are missing (e.g. after the host wiped the
+  // disk), and drop the old examples they replaced.
+  const remove = conn.prepare("DELETE FROM deals WHERE id = ?");
+  for (const id of LEGACY_SAMPLE_IDS) remove.run(id);
+  const insert = conn.prepare("INSERT OR IGNORE INTO deals (id, data) VALUES (?, ?)");
+  for (const deal of buildSampleDeals()) insert.run(deal.id, JSON.stringify(deal));
 
   globalForDb.tabbyDb = conn;
   return conn;
