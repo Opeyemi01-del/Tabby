@@ -405,6 +405,17 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
         </div>
       )}
 
+      {/* On-site work stays proven after payment: the before/after photos */}
+      {status === "released" && usesPhotos && beforePhotos.length > 0 && (
+        <BeforeAfter
+          dealId={dealId}
+          before={beforePhotos}
+          after={deliverables}
+          startedAt={milestone.startedAt}
+          submittedAt={milestone.submittedAt}
+        />
+      )}
+
       {/* Where the money went: forwarded to the freelancer's own PayPal */}
       {status === "released" && <PayoutStatus dealId={dealId} milestone={milestone} hasPayoutEmail={hasPayoutEmail} />}
 

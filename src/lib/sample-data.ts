@@ -110,12 +110,12 @@ function roomCleaning(): Deal {
           ? {
               verdict: "verified",
               summary:
-                "The after photo shows the same bedroom with the floor cleared, the bed made and the clutter put away, matching the agreed clean.",
+                "The after photo shows the same bedroom — same curtains, tiled wall and floor — with the bed made and the bag, shoes and clutter cleared from the floor, matching the agreed clean.",
               checklist: [
-                { requirement: "Floor cleared, swept and mopped", met: "yes", note: "Floor is clear and clean in the after photo" },
-                { requirement: "Bed made with clean sheets", met: "yes", note: "Bed is made in the after photo" },
-                { requirement: "Clothes and clutter put away", met: "yes", note: "No clothes or items left on the floor or bed" },
-                { requirement: "Same room as the before photo", met: "yes", note: "Same window, wall and furniture" },
+                { requirement: "Floor cleared, swept and mopped", met: "yes", note: "Bag, shoes and items gone from the floor; shoes lined up by the wall" },
+                { requirement: "Bed made with clean sheets", met: "yes", note: "Bedspread laid flat with the pillow in place" },
+                { requirement: "Clothes and clutter put away", met: "yes", note: "Nothing left lying on the bed or the floor" },
+                { requirement: "Same room as the before photo", met: "yes", note: "Same curtains, tiled wall, speaker and floor pattern" },
               ],
             }
           : {
