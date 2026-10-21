@@ -41,14 +41,26 @@ export async function generateJson<T>(input: {
       },
     }),
   };
-  const callModel = (name: string) =>
-    fetchWithRetry(`${API_BASE}/${encodeURIComponent(name)}:generateContent`, request);
+  const callModel = (name: string, timeoutMs: number, attempts: number) =>
+    fetchWithRetry(`${API_BASE}/${encodeURIComponent(name)}:generateContent`, request, timeoutMs, attempts);
 
-  let res = await callModel(model);
-  if ((res.status === 429 || res.status === 503) && fallback && fallback !== model) {
-    console.warn(`Gemini ${model} returned ${res.status}; trying backup model ${fallback}`);
-    res = await callModel(fallback);
+  // With a backup, the main model gets one try of 45s: if it's too slow,
+  // out of quota or busy, the backup answers instead of the user waiting
+  // minutes. Without one, it gets two tries of 90s.
+  const hasBackup = Boolean(fallback && fallback !== model);
+  let res: Response | undefined;
+  try {
+    res = await (hasBackup ? callModel(model, 45_000, 1) : callModel(model, 90_000, 2));
+  } catch (err) {
+    if (!hasBackup) throw err;
+    console.warn(`Gemini ${model} didn't answer in time; trying backup model ${fallback}`);
   }
+  // 404 = the model name doesn't exist (any more).
+  if (hasBackup && (!res || res.status === 404 || res.status === 429 || res.status >= 500)) {
+    if (res) console.warn(`Gemini ${model} returned ${res.status}; trying backup model ${fallback}`);
+    res = await callModel(fallback, 90_000, 2);
+  }
+  if (!res) throw new Error("Couldn't reach the AI — please try again");
 
   if (res.status === 429) throw new Error(quotaMessage(await res.text()));
   if (res.status === 503) {
@@ -95,14 +107,13 @@ function quotaMessage(body: string): string {
   return "AI usage limit reached (free tier) — wait a little, or try again later today";
 }
 
-// Tries up to 3 times when the network drops, a try takes over 90s,
-// or Google is briefly busy (5xx), waiting a little longer each time.
+// Tries up to `attempts` times when the network drops, a try takes longer
+// than timeoutMs, or Google is briefly busy (5xx), waiting a little between.
 // (Not on 429 "limit reached" — retrying would just use up more quota.)
-// (90s because uploading files to the AI is slow on weak connections.)
-async function fetchWithRetry(url: string, init: RequestInit, attempts = 3): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, timeoutMs: number, attempts: number): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
     try {
-      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(90_000) });
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
       if (res.status >= 500 && attempt < attempts) {
         await new Promise((r) => setTimeout(r, attempt * 1500));
         continue;
