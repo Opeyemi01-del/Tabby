@@ -86,8 +86,15 @@ export default function PayPalButton({ dealId, clientId }: { dealId: string; cli
                   kind: "success",
                   text: "Payment held by PayPal ✓ It's only released when you approve the delivered work.",
                 });
-                if (reviewUrl) setReviewLink(window.location.origin + reviewUrl);
-                router.refresh();
+                if (reviewUrl) {
+                  // First payment: go straight to the private review page, so
+                  // the link is in the address bar and history (and the page
+                  // asks to bookmark it). The box below is a fallback.
+                  setReviewLink(window.location.origin + reviewUrl);
+                  router.push(reviewUrl);
+                } else {
+                  router.refresh();
+                }
               } catch (err) {
                 setMessage({ kind: "error", text: (err as Error).message });
               }

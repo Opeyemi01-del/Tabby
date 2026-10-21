@@ -74,6 +74,14 @@ export default async function ReviewPage({ params, searchParams }: PageProps<"/r
               {deal.title} {deal.sample && <SampleBadge />}
             </h1>
           </div>
+          {/* Opened with the private link: make sure they keep it */}
+          {linkKey && !deal.sample && (
+            <p className="mt-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
+              <span className="font-semibold">Bookmark this page (Ctrl + D).</span> This address is your private
+              review link — you&apos;ll need it to approve the work, and it&apos;s the only way back in from another
+              browser. Don&apos;t share it.
+            </p>
+          )}
           {deal.sample && (
             <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
               This is what the <span className="font-semibold">client who paid</span> sees for a sample deal. In a real
