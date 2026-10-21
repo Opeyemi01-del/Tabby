@@ -39,6 +39,12 @@ services:
       # Naira per 1 USD, e.g. 1329 (digits only)
       - key: NGN_PER_USD
         sync: false
+      # Sandbox buyer login shown in the home page's "Try it" guide
+      # (PayPal test account, fake money). Leave out to hide it.
+      - key: DEMO_BUYER_EMAIL
+        sync: false
+      - key: DEMO_BUYER_PASSWORD
+        sync: false
       # Short timers so the demo doesn't wait 3 days
       - key: REVIEW_PERIOD_HOURS
         value: "0.05"
