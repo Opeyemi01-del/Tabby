@@ -20,8 +20,8 @@ const features = [
 // from DEMO_BUYER_EMAIL / DEMO_BUYER_PASSWORD (set on the host); if they're
 // missing, that line is left out. Sandbox = PayPal's test mode, fake money.
 const tryLinks = [
-  { href: "/deals/d-sample-pipe", label: "On-site job paid from abroad", note: "materials + work, completion codes, before/after photos" },
-  { href: "/certificate/d-sample-pipe/m-2", label: "Its delivery certificate", note: "fingerprinted proof, shareable" },
+  { href: "/deals/d-sample-clean", label: "On-site job paid from abroad", note: "supplies + work, completion codes, before/after photos" },
+  { href: "/certificate/d-sample-clean/m-2", label: "Its delivery certificate", note: "fingerprinted proof, shareable" },
   { href: "/review/d-sample-insta", label: "What the paying client sees", note: "AI check of real files, approve or ask for fixes" },
   { href: "/disputes", label: "A dispute", note: "AI builds the evidence pack for PayPal" },
 ];

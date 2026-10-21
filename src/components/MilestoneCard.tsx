@@ -192,7 +192,7 @@ export default function MilestoneCard({ dealId, clientName, milestone, releaseRe
             <>
               <p className="mt-3 text-sm text-slate-600">
                 The client&apos;s money is held. <span className="font-medium">Before you start</span>, photograph the
-                place as it is now (e.g. the leaking pipe). The AI compares these with your photos when you finish.
+                place as it is now (e.g. the messy room). The AI compares these with your photos when you finish.
               </p>
               <PhotoCapture label="Take before photos" shots={beforeShots} onChange={setBeforeShots} />
               <div className="mt-3 flex gap-2">

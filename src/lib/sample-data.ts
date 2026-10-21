@@ -15,8 +15,8 @@ import type { Deal, Deliverable } from "./types";
 const DEMO_DIR = path.join(process.cwd(), "demo-files");
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 
-// The old example deals, removed when the new ones are added.
-export const LEGACY_SAMPLE_IDS = ["d-1001", "d-1002", "d-1003", "d-1004"];
+// Old example deals, removed when the current ones are added.
+export const LEGACY_SAMPLE_IDS = ["d-1001", "d-1002", "d-1003", "d-1004", "d-sample-pipe"];
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -50,38 +50,38 @@ function demoFile(fileName: string, id: string, takenAt?: string): Deliverable[]
 const proofOf = (items: Deliverable[]) => items.map((d) => `File ${d.name} · ${short(d.sha256 ?? "")}`);
 
 // --- 1. The diaspora story: an on-site job paid from abroad ----------------
-function pipeRepair(): Deal {
+function roomCleaning(): Deal {
   const startedAt = ago(3 * DAY + 2 * HOUR);
   const finishedAt = ago(3 * DAY - 2 * HOUR);
-  const before = demoFile("pipe-before.jpg", "sample-pipe-before", ago(3 * DAY + 2 * HOUR + 5 * 60_000));
-  const after = demoFile("pipe-after.jpg", "sample-pipe-after", ago(3 * DAY - 2 * HOUR + 4 * 60_000));
+  const before = demoFile("room-before.jpg", "sample-room-before", ago(3 * DAY + 2 * HOUR + 5 * 60_000));
+  const after = demoFile("room-after.jpg", "sample-room-after", ago(3 * DAY - 2 * HOUR + 4 * 60_000));
   const hasPhotos = before.length > 0 && after.length > 0;
 
   const deal: Deal = {
-    id: "d-sample-pipe",
+    id: "d-sample-clean",
     sample: true,
-    title: "Burst kitchen pipe repair",
+    title: "Deep clean of Mum's bedroom",
     clientName: "Tunde Bakare",
     clientEmail: "tunde.bakare@example.com",
     currency: "USD",
     createdAt: ago(5 * DAY).slice(0, 10),
     agreement:
-      "Tunde: Hi Emeka, my mum says the pipe under her kitchen sink burst. I'm in London — can you fix it this week?\n" +
-      "Emeka: Yes sir. I need $40 first for the pipe, fittings and sealant, then $80 for the work.\n" +
-      "Tunde: OK. My mum will be at home in Surulere. She'll check the work before I release anything.\n" +
-      "Emeka: No problem. I'll replace the burst section and make sure there's no leak.",
-    payoutEmail: "emeka.plumbing@example.com",
+      "Tunde: Hi Chioma, my mum comes home from the hospital on Saturday. I'm in London — can you deep-clean her bedroom in Surulere before then?\n" +
+      "Chioma: Yes sir. $15 first for cleaning supplies, then $45 for the cleaning.\n" +
+      "Tunde: OK. My sister will be at the house. She'll check the room before I release anything.\n" +
+      "Chioma: No problem. I'll clear the floor, sweep and mop, make the bed with clean sheets and put everything away.",
+    payoutEmail: "chioma.cleaning@example.com",
     jobType: "onsite",
     jobLocation: "Surulere, Lagos",
     milestones: [
       {
         id: "m-1",
         kind: "materials",
-        title: "Pipe, fittings & sealant",
-        amount: 40,
+        title: "Cleaning supplies",
+        amount: 15,
         dueDate: dateIn(-3),
         status: "released",
-        deliveryNote: "Bought 2 m of PVC pipe, 2 elbows and sealant at the market. Mum saw them before I started.",
+        deliveryNote: "Bought detergent, disinfectant, a new mop head and bin bags. Your sister saw them before I started.",
         submittedAt: ago(4 * DAY),
         aiCheck: {
           verdict: "claimed_only",
@@ -90,18 +90,18 @@ function pipeRepair(): Deal {
         },
         confirmedOnsiteAt: ago(4 * DAY - HOUR),
         releasedBy: "client",
-        netAmount: 37.62,
-        payout: { status: "sent", amount: 37.62, batchId: "SAMPLE-BATCH-1" },
+        netAmount: 13.99,
+        payout: { status: "sent", amount: 13.99, batchId: "SAMPLE-BATCH-1" },
         authorizationId: "SAMPLE-AUTH-1",
         captureId: "SAMPLE-CAP-1",
       },
       {
         id: "m-2",
-        title: "Replace the burst pipe section, no leaks",
-        amount: 80,
+        title: "Deep clean of the bedroom",
+        amount: 45,
         dueDate: dateIn(-1),
         status: "released",
-        deliveryNote: "Replaced the cracked section and both joints. Ran the tap for 10 minutes — no drips.",
+        deliveryNote: "Cleared and mopped the floor, changed the sheets, folded the clothes and took out 2 bags of rubbish.",
         beforePhotos: before,
         startedAt,
         deliverables: after,
@@ -110,21 +110,22 @@ function pipeRepair(): Deal {
           ? {
               verdict: "verified",
               summary:
-                "The after photo shows the same sink cabinet with the cracked pipe replaced by a new section and dry joints, matching the agreed repair.",
+                "The after photo shows the same bedroom with the floor cleared, the bed made and the clutter put away, matching the agreed clean.",
               checklist: [
-                { requirement: "Burst pipe section replaced", met: "yes", note: "New pipe visible where the cracked one was" },
-                { requirement: "No visible leak after the repair", met: "yes", note: "Joints and cabinet floor look dry" },
-                { requirement: "Same place as the before photo", met: "yes", note: "Same cabinet, tap and wall tiles" },
+                { requirement: "Floor cleared, swept and mopped", met: "yes", note: "Floor is clear and clean in the after photo" },
+                { requirement: "Bed made with clean sheets", met: "yes", note: "Bed is made in the after photo" },
+                { requirement: "Clothes and clutter put away", met: "yes", note: "No clothes or items left on the floor or bed" },
+                { requirement: "Same room as the before photo", met: "yes", note: "Same window, wall and furniture" },
               ],
             }
           : {
               verdict: "claimed_only",
-              summary: "No photos were attached to this sample, so the repair rests on the artisan's note.",
+              summary: "No photos were attached to this sample, so the clean rests on the cleaner's note.",
             },
         confirmedOnsiteAt: ago(3 * DAY - HOUR),
         releasedBy: "client",
-        netAmount: 76.72,
-        payout: { status: "sent", amount: 76.72, batchId: "SAMPLE-BATCH-2" },
+        netAmount: 42.94,
+        payout: { status: "sent", amount: 42.94, batchId: "SAMPLE-BATCH-2" },
         authorizationId: "SAMPLE-AUTH-2",
         captureId: "SAMPLE-CAP-2",
       },
@@ -137,17 +138,17 @@ function pipeRepair(): Deal {
     summary: "Agreement recorded from the client chat",
     proof: [`Agreement fingerprint ${short(sha256Text(deal.agreement))}`],
   });
-  e(ago(5 * DAY - HOUR), { type: "payment_held", milestoneId: "m-1", summary: 'Client paid $40.00 for "Pipe, fittings & sealant" — held by PayPal', proof: ["PayPal authorization SAMPLE-AUTH-1"] });
-  e(ago(4 * DAY - HOUR), { type: "onsite_confirmed", milestoneId: "m-1", summary: 'Confirmed on-site that the materials arrived: the person at the place gave the artisan the code for "Pipe, fittings & sealant"' });
-  e(ago(4 * DAY - 30 * 60_000), { type: "released", milestoneId: "m-1", summary: "Client approved — $40.00 released to the freelancer", proof: ["PayPal capture SAMPLE-CAP-1 (COMPLETED)"] });
-  e(ago(4 * DAY - 25 * 60_000), { type: "payout_sent", milestoneId: "m-1", summary: "$37.62 sent to the freelancer's PayPal", proof: ["PayPal payout batch SAMPLE-BATCH-1"] });
-  e(ago(3 * DAY + 3 * HOUR), { type: "payment_held", milestoneId: "m-2", summary: 'Client paid $80.00 for "Replace the burst pipe section, no leaks" — held by PayPal', proof: ["PayPal authorization SAMPLE-AUTH-2"] });
-  if (before.length) e(startedAt, { type: "work_started", milestoneId: "m-2", summary: 'Job started for "Replace the burst pipe section, no leaks": 1 before photo', proof: proofOf(before) });
-  e(finishedAt, { type: "work_submitted", milestoneId: "m-2", summary: `Job finished for "Replace the burst pipe section, no leaks": ${after.length || "no"} after photo${after.length === 1 ? "" : "s"}`, proof: proofOf(after) });
-  e(ago(3 * DAY - 2 * HOUR + 60_000), { type: "ai_checked", milestoneId: "m-2", summary: hasPhotos ? "AI check: verified from the files (3 of 3 requirements met)" : "AI check: claimed only" });
-  e(ago(3 * DAY - HOUR), { type: "onsite_confirmed", milestoneId: "m-2", summary: 'Confirmed on-site that the job is done: the person at the place gave the artisan the code for "Replace the burst pipe section, no leaks"' });
-  e(ago(3 * DAY - 40 * 60_000), { type: "released", milestoneId: "m-2", summary: "Client approved — $80.00 released to the freelancer", proof: ["PayPal capture SAMPLE-CAP-2 (COMPLETED)"] });
-  e(ago(3 * DAY - 35 * 60_000), { type: "payout_sent", milestoneId: "m-2", summary: "$76.72 sent to the freelancer's PayPal", proof: ["PayPal payout batch SAMPLE-BATCH-2"] });
+  e(ago(5 * DAY - HOUR), { type: "payment_held", milestoneId: "m-1", summary: 'Client paid $15.00 for "Cleaning supplies" — held by PayPal', proof: ["PayPal authorization SAMPLE-AUTH-1"] });
+  e(ago(4 * DAY - HOUR), { type: "onsite_confirmed", milestoneId: "m-1", summary: 'Confirmed on-site that the materials arrived: the person at the place gave the artisan the code for "Cleaning supplies"' });
+  e(ago(4 * DAY - 30 * 60_000), { type: "released", milestoneId: "m-1", summary: "Client approved — $15.00 released to the freelancer", proof: ["PayPal capture SAMPLE-CAP-1 (COMPLETED)"] });
+  e(ago(4 * DAY - 25 * 60_000), { type: "payout_sent", milestoneId: "m-1", summary: "$13.99 sent to the freelancer's PayPal", proof: ["PayPal payout batch SAMPLE-BATCH-1"] });
+  e(ago(3 * DAY + 3 * HOUR), { type: "payment_held", milestoneId: "m-2", summary: 'Client paid $45.00 for "Deep clean of the bedroom" — held by PayPal', proof: ["PayPal authorization SAMPLE-AUTH-2"] });
+  if (before.length) e(startedAt, { type: "work_started", milestoneId: "m-2", summary: 'Job started for "Deep clean of the bedroom": 1 before photo', proof: proofOf(before) });
+  e(finishedAt, { type: "work_submitted", milestoneId: "m-2", summary: `Job finished for "Deep clean of the bedroom": ${after.length || "no"} after photo${after.length === 1 ? "" : "s"}`, proof: proofOf(after) });
+  e(ago(3 * DAY - 2 * HOUR + 60_000), { type: "ai_checked", milestoneId: "m-2", summary: hasPhotos ? "AI check: verified from the files (4 of 4 requirements met)" : "AI check: claimed only" });
+  e(ago(3 * DAY - HOUR), { type: "onsite_confirmed", milestoneId: "m-2", summary: 'Confirmed on-site that the job is done: the person at the place gave the artisan the code for "Deep clean of the bedroom"' });
+  e(ago(3 * DAY - 40 * 60_000), { type: "released", milestoneId: "m-2", summary: "Client approved — $45.00 released to the freelancer", proof: ["PayPal capture SAMPLE-CAP-2 (COMPLETED)"] });
+  e(ago(3 * DAY - 35 * 60_000), { type: "payout_sent", milestoneId: "m-2", summary: "$42.94 sent to the freelancer's PayPal", proof: ["PayPal payout batch SAMPLE-BATCH-2"] });
   return deal;
 }
 
@@ -291,5 +292,5 @@ function uiKitDispute(): Deal {
 
 // Fresh copies every time (dates are relative to now).
 export function buildSampleDeals(): Deal[] {
-  return [pipeRepair(), instagramTemplates(), blogPosts(), uiKitDispute()];
+  return [roomCleaning(), instagramTemplates(), blogPosts(), uiKitDispute()];
 }

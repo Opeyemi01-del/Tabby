@@ -34,10 +34,10 @@ const SAMPLE_CHATS = [
   {
     label: "On-site job",
     chat:
-      "Tunde: Hi Emeka, my mum says the kitchen tap at her house in Surulere is leaking badly. I'm in London — can you fix it this week?\n" +
-      "Emeka: Yes sir. $3 for a new washer and tape, then $5 for the work.\n" +
-      "Tunde: OK. My mum will be at home and will check it before I release anything. My email is tunde@example.com.\n" +
-      "Emeka: No problem, I'll come on Thursday.",
+      "Tunde: Hi Chioma, can you clean my mum's sitting room in Surulere this week? I'm in London.\n" +
+      "Chioma: Yes sir. $3 for cleaning supplies first, then $5 for the cleaning.\n" +
+      "Tunde: OK. My sister will be at the house and will check it before I release anything. My email is tunde@example.com.\n" +
+      "Chioma: No problem, I'll come on Thursday.",
   },
   {
     label: "Digital job",
