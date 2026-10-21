@@ -1,11 +1,12 @@
 // POST /api/deals/{id}/dispute/evidence            -> AI builds the evidence pack
 // POST /api/deals/{id}/dispute/evidence?submit=1   -> also sends it to PayPal
+//   (as formal evidence, or as a dispute message in the early inquiry stage)
 // The freelancer can review the pack first, then submit.
 import { buildEvidence } from "@/lib/ai";
 import { handleError, jsonError } from "@/lib/api";
 import { findDeal, saveDeal } from "@/lib/db";
 import { addEvent } from "@/lib/events";
-import { provideDisputeEvidence } from "@/lib/paypal";
+import { respondToDispute } from "@/lib/paypal";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/dispute/evidence">) {
   const { id } = await ctx.params;
@@ -28,12 +29,15 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deals/[id]/disp
     if (submit) {
       if (dispute.status !== "open") return jsonError("Evidence was already submitted", 409);
       const notes = dispute.evidence.map((e, i) => `${i + 1}. ${e.title}: ${e.detail}`).join("\n");
-      await provideDisputeEvidence(dispute.id, notes);
+      const sentAs = await respondToDispute(dispute.id, notes);
       dispute.status = "evidence_submitted";
       addEvent(deal, {
         type: "evidence_submitted",
         milestoneId: milestone.id,
-        summary: `Evidence pack (${dispute.evidence.length} items) sent to PayPal`,
+        summary:
+          sentAs === "evidence"
+            ? `Evidence pack (${dispute.evidence.length} items) sent to PayPal`
+            : `Evidence pack (${dispute.evidence.length} items) posted in the PayPal dispute conversation`,
         proof: [`PayPal dispute ${dispute.id}`],
       });
       saveDeal(deal);

@@ -219,19 +219,45 @@ export async function voidAuthorization(authorizationId: string): Promise<void> 
 export type PayPalDispute = {
   dispute_id: string;
   reason: string;
-  status: string;
+  status: string; // e.g. WAITING_FOR_SELLER_RESPONSE
+  dispute_life_cycle_stage?: string; // INQUIRY -> CHARGEBACK (a "claim") -> ...
   create_time: string;
   disputed_transactions?: { seller_transaction_id?: string }[];
+  links?: { rel: string; method: string }[]; // the actions PayPal allows right now
 };
 
 export async function getDispute(disputeId: string): Promise<PayPalDispute> {
   return paypalRequest<PayPalDispute>(`/v1/customer/disputes/${encodeURIComponent(disputeId)}`);
 }
 
+// Answers a dispute with our evidence pack, the way PayPal allows right now:
+//   "evidence" -> formal evidence (once the case is a claim and PayPal asks)
+//   "message"  -> a message in the dispute conversation (the first,
+//                 INQUIRY stage only allows messages, offers or refunds;
+//                 PayPal reads the conversation if the case escalates)
+export async function respondToDispute(disputeId: string, notes: string): Promise<"evidence" | "message"> {
+  const dispute = await getDispute(disputeId);
+  const allows = (rel: string) => dispute.links?.some((l) => l.rel === rel) ?? false;
+  if (allows("provide_evidence")) {
+    await provideDisputeEvidence(disputeId, notes);
+    return "evidence";
+  }
+  if (allows("send_message")) {
+    await paypalRequest(`/v1/customer/disputes/${encodeURIComponent(disputeId)}/send-message`, {
+      method: "POST",
+      body: { message: notes.slice(0, 2000) },
+    });
+    return "message";
+  }
+  throw new PayPalError(
+    `PayPal isn't accepting a response on this dispute right now (status: ${dispute.status.toLowerCase().replaceAll("_", " ")})`,
+    409,
+  );
+}
+
 // Sends our written evidence to PayPal for a dispute.
 // PayPal expects a multipart form with a JSON part named "input".
-// (Verify the accepted evidence_type values in sandbox testing.)
-export async function provideDisputeEvidence(disputeId: string, notes: string): Promise<void> {
+async function provideDisputeEvidence(disputeId: string, notes: string): Promise<void> {
   const form = new FormData();
   form.append(
     "input",
@@ -247,7 +273,8 @@ export async function provideDisputeEvidence(disputeId: string, notes: string): 
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new PayPalError(data.message ?? `Could not submit evidence (${res.status})`, res.status, data);
+    const message = data.details?.[0]?.description ?? data.message ?? `Could not submit evidence (${res.status})`;
+    throw new PayPalError(message, res.status, data);
   }
 }
 
