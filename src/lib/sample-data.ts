@@ -163,14 +163,14 @@ function instagramTemplates(): Deal {
     id: "d-sample-insta",
     sample: true,
     title: "Instagram post templates",
-    clientName: "Sarah Mensah",
-    clientEmail: "sarah@example.com",
+    clientName: "Ada Okafor",
+    clientEmail: "ada@example.com",
     currency: "USD",
     createdAt: ago(4 * DAY).slice(0, 10),
     agreement:
-      "Sarah: Can you make 3 Instagram post templates for my bakery? New arrivals, a sale, and a customer favourite.\n" +
-      "You: Sure — $60. I'll use your brown and cream colours and leave space for photos.\n" +
-      "Sarah: Perfect. Then a short logo animation for $40 next week.",
+      "Ada: Can you make 3 Instagram post templates for Ada's Shoe Shop? New arrivals, a 50% off weekend sale, and a customer favourite.\n" +
+      "You: Sure — $60. A different bold colour for each, a shoe illustration, the shop name, your @adashoes handle, and space for a caption.\n" +
+      "Ada: Perfect. Then story-size versions for $40 next week.",
     payoutEmail: "designer@example.com",
     jobType: "digital",
     milestones: [
@@ -180,7 +180,7 @@ function instagramTemplates(): Deal {
         amount: 60,
         dueDate: dateIn(2),
         status: "work_submitted",
-        deliveryNote: "All three templates attached as PNG, in your brand colours.",
+        deliveryNote: "All three templates attached as PNG (1080 × 1080), ready for Instagram.",
         deliverables: files,
         submittedAt: ago(5 * HOUR),
         reviewDeadline: new Date(Date.now() + 2 * DAY).toISOString(),
@@ -188,11 +188,13 @@ function instagramTemplates(): Deal {
           files.length === 3
             ? {
                 verdict: "verified",
-                summary: "All three templates were delivered as images and each matches one of the agreed themes.",
+                summary:
+                  "All three templates were delivered as images: New Arrivals (blue), 50% Off Sale (red) and Customer Fave (green), each with the shop name, a shoe illustration and the @adashoes handle.",
                 checklist: [
-                  { requirement: "3 templates", met: "yes", note: "Three PNG files attached" },
-                  { requirement: "New arrivals, sale and favourite themes", met: "yes", note: "One template for each theme" },
-                  { requirement: "Brand colours (brown and cream)", met: "yes", note: "All three use brown and cream" },
+                  { requirement: "3 templates", met: "yes", note: "Three PNG images attached" },
+                  { requirement: "New arrivals, 50% off sale and customer favourite", met: "yes", note: "\"NEW ARRIVALS\", \"50% OFF SALE\" and \"CUSTOMER FAVE\"" },
+                  { requirement: "Bold colour, shoe illustration and shop name on each", met: "yes", note: "Blue, red and green; same shoe; \"ADA'S SHOE SHOP\" on all three" },
+                  { requirement: "@adashoes handle and space for a caption", met: "yes", note: "\"[ Your text here ]\" and @adashoes at the bottom" },
                 ],
               }
             : {
@@ -203,7 +205,7 @@ function instagramTemplates(): Deal {
       },
       {
         id: "m-2",
-        title: "Short logo animation",
+        title: "Story-size versions (9:16)",
         amount: 40,
         dueDate: dateIn(9),
         status: "awaiting_payment",
@@ -214,7 +216,7 @@ function instagramTemplates(): Deal {
   e(ago(4 * DAY), { type: "deal_created", summary: "Agreement recorded from the client chat", proof: [`Agreement fingerprint ${short(sha256Text(deal.agreement))}`] });
   e(ago(4 * DAY - 2 * HOUR), { type: "payment_held", milestoneId: "m-1", summary: 'Client paid $60.00 for "3 Instagram post templates" — held by PayPal', proof: ["PayPal authorization SAMPLE-AUTH-3"] });
   e(ago(5 * HOUR), { type: "work_submitted", milestoneId: "m-1", summary: `Work delivered for "3 Instagram post templates": ${files.length || "no"} item${files.length === 1 ? "" : "s"}`, proof: proofOf(files) });
-  e(ago(5 * HOUR - 60_000), { type: "ai_checked", milestoneId: "m-1", summary: files.length === 3 ? "AI check: verified from the files (3 of 3 requirements met)" : "AI check: claimed only" });
+  e(ago(5 * HOUR - 60_000), { type: "ai_checked", milestoneId: "m-1", summary: files.length === 3 ? "AI check: verified from the files (4 of 4 requirements met)" : "AI check: claimed only" });
   return deal;
 }
 
