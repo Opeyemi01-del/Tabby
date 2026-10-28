@@ -5,7 +5,7 @@
 Tabby holds a client's payment with PayPal until the work is delivered, uses AI to check the delivery against what was agreed, and defends the freelancer if the client later disputes the payment.
 
 - **Live demo:** https://tabby-cx16.onrender.com (PayPal sandbox — no real money)
-- **Demo video:** _coming soon_
+- **Demo video:**https://youtube.com/shorts/sYfO4cdBSVc?si=c4Zf0rg68Ta2de2b
 - Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com)
 
 ---
